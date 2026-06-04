@@ -1,0 +1,455 @@
+@model FitTrack.Models.ApplicationUser
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "My Profile";
+
+    var userPrograms = ViewBag.UserPrograms as IList<UserProgram>   ?? new List<UserProgram>();
+    var recommended  = ViewBag.Recommended  as IList<WorkoutProgram> ?? new List<WorkoutProgram>();
+    double? bmi      = ViewBag.Bmi;
+    string bmiCat    = ViewBag.BmiCategory ?? "";
+    string bmiClass  = ViewBag.BmiClass    ?? "bg-secondary";
+
+    var goalMeta = new Dictionary<FitnessGoal, (string Icon, string Label, string Color, string Desc)>
+    {
+        { FitnessGoal.LoseWeight,          ("📉", "Lose Weight",          "#f87171", "Burn fat with cardio-focused programs") },
+        { FitnessGoal.BuildMuscle,         ("💪", "Build Muscle",         "#60a5fa", "Progressive resistance & strength training") },
+        { FitnessGoal.ImproveEndurance,    ("🏃", "Improve Endurance",    "#34d399", "Boost stamina & cardiovascular fitness") },
+        { FitnessGoal.IncreaseFlexibility, ("🧘", "Increase Flexibility", "#a78bfa", "Mobility work to reduce injury risk") },
+        { FitnessGoal.StayHealthy,         ("❤️", "Stay Healthy",         "#fb923c", "Balanced fitness for overall wellness") }
+    };
+
+    var levelMeta = new Dictionary<FitnessLevel, (string Label, string Color)>
+    {
+        { FitnessLevel.Beginner,     ("Beginner",     "#4ade80") },
+        { FitnessLevel.Intermediate, ("Intermediate", "#facc15") },
+        { FitnessLevel.Advanced,     ("Advanced",     "#f87171") }
+    };
+
+    var (goalIcon, goalLabel, goalColor, goalDesc) = Model.FitnessGoal.HasValue
+        ? goalMeta[Model.FitnessGoal.Value]
+        : ("🎯", "Not set", "#94a3b8", "");
+
+    var (lvlLabel, lvlColor) = Model.FitnessLevel.HasValue
+        ? levelMeta[Model.FitnessLevel.Value]
+        : ("Not set", "#94a3b8");
+
+    // BMI gauge: map 10–40 range to 0–100%
+    double bmiGaugePct = bmi.HasValue ? Math.Min(100, Math.Max(0, (bmi.Value - 10) / 30.0 * 100)) : 0;
+    string bmiBarColor = bmiCat switch
+    {
+        "Normal"      => "#4ade80",
+        "Overweight"  => "#facc15",
+        "Obese"       => "#f87171",
+        "Underweight" => "#60a5fa",
+        _             => "#94a3b8"
+    };
+}
+
+<style>
+    /* ── Page base ────────────────────────────────────────────────────── */
+    .pf-page { background: #f8f9fb; min-height: 100vh; }
+
+    /* ── Hero ─────────────────────────────────────────────────────────── */
+    .pf-hero {
+        background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 55%, #16213e 100%);
+        padding: 2.5rem 0 5rem;
+        position: relative;
+    }
+    .pf-avatar-lg {
+        width: 90px; height: 90px; border-radius: 50%;
+        background: linear-gradient(135deg, #c9a227, #e0c97f);
+        color: #0d0d1a;
+        font-size: 2.2rem; font-weight: 900;
+        display: flex; align-items: center; justify-content: center;
+        border: 3px solid rgba(255,255,255,.2);
+        flex-shrink: 0;
+    }
+    .pf-hero-badge {
+        display: inline-flex; align-items: center; gap: .35rem;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 20px;
+        padding: .25rem .75rem;
+        font-size: .82rem; color: rgba(255,255,255,.85);
+        backdrop-filter: blur(4px);
+    }
+    .pf-hero-dot { width:8px;height:8px;border-radius:50%; }
+
+    /* ── Cards pulled up over hero ────────────────────────────────────── */
+    .pf-cards-row {
+        margin-top: -3.5rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    /* ── Stat card ────────────────────────────────────────────────────── */
+    .pf-stat-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem 1rem;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid rgba(0,0,0,.04);
+        transition: transform .2s, box-shadow .2s;
+    }
+    .pf-stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.13); }
+    .pf-stat-icon { font-size: 1.6rem; line-height: 1; margin-bottom: .4rem; }
+    .pf-stat-value { font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: #1a1a2e; }
+    .pf-stat-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-top: .2rem; }
+
+    /* ── Section heading ──────────────────────────────────────────────── */
+    .pf-section-title {
+        font-size: 1rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: .08em;
+        color: #64748b; margin-bottom: 1rem;
+    }
+
+    /* ── Goal card ────────────────────────────────────────────────────── */
+    .pf-goal-card {
+        background: #fff; border-radius: 16px;
+        padding: 1.4rem 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,.07);
+        border: 1px solid rgba(0,0,0,.04);
+        display: flex; align-items: center; gap: 1.2rem;
+    }
+    .pf-goal-icon {
+        width: 60px; height: 60px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; flex-shrink: 0;
+    }
+
+    /* ── BMI card ─────────────────────────────────────────────────────── */
+    .pf-bmi-card {
+        background: #fff; border-radius: 16px;
+        padding: 1.4rem 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,.07);
+        border: 1px solid rgba(0,0,0,.04);
+    }
+    .pf-bmi-track {
+        height: 10px; border-radius: 10px;
+        background: #e2e8f0; overflow: visible; position: relative;
+    }
+    .pf-bmi-fill {
+        height: 100%; border-radius: 10px;
+        transition: width .8s ease;
+        position: relative;
+    }
+    .pf-bmi-fill::after {
+        content: '';
+        position: absolute; right: -5px; top: -4px;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: inherit;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    /* ── Enrolled program card ────────────────────────────────────────── */
+    .pf-prog-card {
+        background: #fff; border-radius: 16px;
+        padding: 1.2rem 1.4rem;
+        box-shadow: 0 3px 15px rgba(0,0,0,.06);
+        border: 1px solid rgba(0,0,0,.04);
+        transition: box-shadow .2s, transform .2s;
+        text-decoration: none; color: inherit; display: block;
+    }
+    .pf-prog-card:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,.12);
+        transform: translateY(-2px); color: inherit;
+    }
+    .pf-prog-bar-track {
+        height: 6px; border-radius: 6px; background: #e2e8f0; margin-top: .75rem;
+    }
+    .pf-prog-bar-fill { height: 100%; border-radius: 6px; }
+
+    /* ── Recommended horizontal scroll ───────────────────────────────── */
+    .pf-rec-scroll {
+        display: flex; gap: 1rem;
+        overflow-x: auto; padding-bottom: .5rem;
+        scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+    }
+    .pf-rec-scroll::-webkit-scrollbar { height: 4px; }
+    .pf-rec-scroll::-webkit-scrollbar-track { background: transparent; }
+    .pf-rec-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .pf-rec-card {
+        min-width: 210px; background: #fff;
+        border-radius: 14px; padding: 1.1rem 1.2rem;
+        box-shadow: 0 3px 14px rgba(0,0,0,.07);
+        border: 1px solid rgba(0,0,0,.04);
+        text-decoration: none; color: inherit;
+        transition: transform .2s, box-shadow .2s; flex-shrink: 0;
+    }
+    .pf-rec-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,.12); color: inherit; }
+
+    /* ── Floating edit button ─────────────────────────────────────────── */
+    .pf-fab {
+        position: fixed; bottom: 2rem; right: 2rem; z-index: 1050;
+        background: linear-gradient(135deg, #c9a227, #e0c97f);
+        color: #0d0d1a; border: none;
+        width: 56px; height: 56px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; font-weight: 700;
+        box-shadow: 0 6px 20px rgba(201,162,39,.45);
+        text-decoration: none;
+        transition: transform .2s, box-shadow .2s;
+    }
+    .pf-fab:hover { transform: scale(1.1); box-shadow: 0 10px 28px rgba(201,162,39,.6); color: #0d0d1a; }
+    .pf-fab-tooltip {
+        position: fixed; bottom: 2rem; right: 5rem; z-index: 1049;
+        background: #1a1a2e; color: #fff;
+        padding: .4rem .8rem; border-radius: 8px; font-size: .82rem;
+        opacity: 0; pointer-events: none; transition: opacity .2s;
+        white-space: nowrap;
+    }
+    .pf-fab:hover ~ .pf-fab-tooltip { opacity: 1; }
+</style>
+
+<div class="pf-page">
+
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="alert alert-success alert-dismissible fade show m-3 mb-0">
+            @msg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ══════════════════════════════════════════════════════════════════
+       HERO
+    ══════════════════════════════════════════════════════════════════ *@
+    <div class="pf-hero">
+        <div class="container">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <div class="pf-avatar-lg">@Model.Email?[0].ToString().ToUpper()</div>
+                <div>
+                    <h2 class="text-white fw-bold mb-2" style="font-size:1.6rem">@Model.Email</h2>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="pf-hero-badge">
+                            <span class="pf-hero-dot" style="background:@lvlColor"></span>
+                            @lvlLabel
+                        </span>
+                        <span class="pf-hero-badge">
+                            <span>@goalIcon</span>
+                            @goalLabel
+                        </span>
+                        <span class="pf-hero-badge">
+                            &#128101; @userPrograms.Count program(s) enrolled
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container pf-cards-row">
+
+        @* ══════════════════════════════════════════════════════════════
+           STAT CARDS ROW
+        ══════════════════════════════════════════════════════════════ *@
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="pf-stat-card">
+                    <div class="pf-stat-icon">&#128208;</div>
+                    <div class="pf-stat-value">@Model.Height</div>
+                    <div class="pf-stat-label">Height (cm)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pf-stat-card">
+                    <div class="pf-stat-icon">&#9878;&#65039;</div>
+                    <div class="pf-stat-value">@Model.Weight</div>
+                    <div class="pf-stat-label">Weight (kg)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pf-stat-card">
+                    <div class="pf-stat-icon">&#127874;</div>
+                    <div class="pf-stat-value">@Model.Age</div>
+                    <div class="pf-stat-label">Age (years)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="pf-stat-card">
+                    <div class="pf-stat-icon">&#128200;</div>
+                    <div class="pf-stat-value">@(bmi.HasValue ? bmi.ToString() : "—")</div>
+                    <div class="pf-stat-label">BMI</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+
+                @* ══════════════════════════════════════════════════════
+                   BMI CARD
+                ══════════════════════════════════════════════════════ *@
+                @if (bmi.HasValue)
+                {
+                    <p class="pf-section-title">Body Mass Index</p>
+                    <div class="pf-bmi-card mb-4">
+                        <div class="d-flex justify-content-between align-items-end mb-2">
+                            <div>
+                                <span style="font-size:2rem;font-weight:800;color:#1a1a2e">@bmi</span>
+                                <span class="ms-2 fw-semibold" style="color:@bmiBarColor">@bmiCat</span>
+                            </div>
+                            <small class="text-muted">BMI Scale: 10 – 40</small>
+                        </div>
+                        <div class="pf-bmi-track">
+                            <div class="pf-bmi-fill" style="width:@bmiGaugePct%;background:@bmiBarColor"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2" style="font-size:.72rem;color:#94a3b8">
+                            <span>Underweight</span><span>Normal</span><span>Overweight</span><span>Obese</span>
+                        </div>
+                    </div>
+                }
+
+                @* ══════════════════════════════════════════════════════
+                   FITNESS GOAL CARD
+                ══════════════════════════════════════════════════════ *@
+                <p class="pf-section-title">Primary Goal</p>
+                <div class="pf-goal-card mb-4">
+                    <div class="pf-goal-icon" style="background:@(goalColor)22">
+                        <span>@goalIcon</span>
+                    </div>
+                    <div>
+                        <div class="fw-bold" style="font-size:1.1rem;color:#1a1a2e">@goalLabel</div>
+                        <div class="text-muted small">@goalDesc</div>
+                    </div>
+                </div>
+
+                @* ══════════════════════════════════════════════════════
+                   ENROLLED PROGRAMS
+                ══════════════════════════════════════════════════════ *@
+                <p class="pf-section-title">
+                    My Programs
+                    <span class="badge bg-secondary ms-1 text-lowercase fw-normal" style="font-size:.75rem">@userPrograms.Count</span>
+                </p>
+
+                @if (!userPrograms.Any())
+                {
+                    <div class="alert alert-info border-0 rounded-3">
+                        No programs yet. <a asp-controller="WorkoutPrograms" asp-action="Index" class="alert-link">Browse programs</a> to get started.
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3 mb-2">
+                        @foreach (var up in userPrograms)
+                        {
+                            var totalWorkouts = up.WorkoutProgram.DurationWeeks * 5;
+                            var pct  = Math.Min(100, (int)Math.Round((double)up.CompletedWorkouts / totalWorkouts * 100));
+                            var barColor = up.IsCompleted ? "#4ade80" : "#60a5fa";
+                            var levelBadgeColor = up.WorkoutProgram.Level switch
+                            {
+                                Level.Beginner     => "#4ade80",
+                                Level.Intermediate => "#facc15",
+                                Level.Advanced     => "#f87171",
+                                _                  => "#94a3b8"
+                            };
+
+                            <a asp-controller="WorkoutPrograms" asp-action="Details"
+                               asp-route-id="@up.WorkoutProgramId" class="pf-prog-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-bold" style="color:#1a1a2e">@up.WorkoutProgram.Name</div>
+                                        <small class="text-muted">
+                                            Started @up.StartDate.ToString("MMM d, yyyy")
+                                            &bull; @up.CompletedWorkouts / @totalWorkouts workouts
+                                        </small>
+                                    </div>
+                                    <div class="d-flex flex-column align-items-end gap-1">
+                                        <span class="badge rounded-pill"
+                                              style="background:@(levelBadgeColor)22;color:@levelBadgeColor;font-size:.72rem">
+                                            @up.WorkoutProgram.Level
+                                        </span>
+                                        @if (up.IsCompleted)
+                                        {
+                                            <span class="badge rounded-pill"
+                                                  style="background:#4ade8022;color:#16a34a;font-size:.72rem">
+                                                &#10003; Done
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:.78rem;font-weight:700;color:@barColor">@pct%</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="pf-prog-bar-track">
+                                    <div class="pf-prog-bar-fill" style="width:@pct%;background:@barColor"></div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+
+            </div>
+
+            @* ══════════════════════════════════════════════════════════
+               RIGHT COLUMN — profile summary + recommended
+            ══════════════════════════════════════════════════════════ *@
+            <div class="col-lg-5">
+
+                @* Profile summary *@
+                <p class="pf-section-title">Profile Summary</p>
+                <div class="pf-bmi-card mb-4">
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted small">Gender</span>
+                            <span class="fw-semibold small">@Model.Gender</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted small">Fitness Level</span>
+                            <span class="fw-semibold small" style="color:@lvlColor">@lvlLabel</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-2">
+                            <span class="text-muted small">Primary Goal</span>
+                            <span class="fw-semibold small">@goalIcon @goalLabel</span>
+                        </li>
+                    </ul>
+                </div>
+
+                @* Recommended programs *@
+                @if (recommended.Any())
+                {
+                    <p class="pf-section-title">Recommended For You</p>
+                    <div class="pf-rec-scroll">
+                        @foreach (var p in recommended)
+                        {
+                            var recLvlColor = p.Level switch
+                            {
+                                Level.Beginner     => "#4ade80",
+                                Level.Intermediate => "#facc15",
+                                Level.Advanced     => "#f87171",
+                                _                  => "#94a3b8"
+                            };
+                            <a asp-controller="WorkoutPrograms" asp-action="Details"
+                               asp-route-id="@p.Id" class="pf-rec-card">
+                                <div class="fw-bold mb-1" style="color:#1a1a2e;font-size:.95rem">@p.Name</div>
+                                <div class="d-flex gap-1 flex-wrap mb-2">
+                                    <span class="badge rounded-pill"
+                                          style="background:@(recLvlColor)22;color:@recLvlColor;font-size:.7rem">
+                                        @p.Level
+                                    </span>
+                                    <span class="badge rounded-pill bg-light text-dark" style="font-size:.7rem">
+                                        @p.Category
+                                    </span>
+                                </div>
+                                <small class="text-muted">&#128197; @p.DurationWeeks weeks</small>
+                            </a>
+                        }
+                    </div>
+                    <a asp-controller="WorkoutPrograms" asp-action="Index"
+                       class="d-block text-center mt-3 text-muted small">
+                        Browse all programs &rarr;
+                    </a>
+                }
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* Floating Edit Button *@
+<a asp-action="Edit" class="pf-fab" title="Edit profile">&#9998;</a>
+<span class="pf-fab-tooltip">Edit Profile</span>

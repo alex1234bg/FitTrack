@@ -1,0 +1,170 @@
+@model FitTrack.Models.ViewModels.LogWorkoutViewModel
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Log Workout";
+}
+
+<style>
+    .lw-card { border: none; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.09); }
+    .lw-header { background: linear-gradient(135deg, #0d0d1a, #1a1a2e); color: #fff; border-radius: 16px 16px 0 0; padding: 1.5rem 1.75rem; }
+
+    /* Feeling cards */
+    .feeling-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+    @@media (max-width: 500px) { .feeling-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .feeling-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1rem .75rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .18s, transform .15s, box-shadow .18s;
+        user-select: none;
+    }
+    .feeling-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .feeling-card .emoji { font-size: 2rem; display: block; margin-bottom: .3rem; line-height: 1; }
+    .feeling-card .label { font-size: .82rem; font-weight: 600; color: #495057; }
+    .feeling-card input[type=radio] { display: none; }
+
+    .feeling-card[data-feeling="Great"].selected  { border-color: #10b981; background: #d1fae5; }
+    .feeling-card[data-feeling="Good"].selected   { border-color: #3b82f6; background: #dbeafe; }
+    .feeling-card[data-feeling="Okay"].selected   { border-color: #f59e0b; background: #fef3c7; }
+    .feeling-card[data-feeling="Tough"].selected  { border-color: #ef4444; background: #fee2e2; }
+
+    /* Duration slider */
+    .duration-track { position: relative; }
+    .duration-value {
+        display: inline-block;
+        background: #c9a227;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.1rem;
+        padding: .25rem .9rem;
+        border-radius: 8px;
+        min-width: 80px;
+        text-align: center;
+    }
+    input[type=range] { accent-color: #c9a227; }
+</style>
+
+<div class="container mt-4" style="max-width:680px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Progress</a></li>
+            <li class="breadcrumb-item active">Log Workout</li>
+        </ol>
+    </nav>
+
+    <div class="lw-card card">
+        <div class="lw-header">
+            <h5 class="mb-0 fw-bold">Log a Workout Session</h5>
+            <small class="text-white-50">Record what you did and how it felt</small>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="LogWorkout" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                @* Date *@
+                <div class="mb-3">
+                    <label asp-for="LoggedOn" class="form-label fw-semibold">Date</label>
+                    <input asp-for="LoggedOn" type="date" class="form-control"
+                           max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="LoggedOn" class="text-danger small"></span>
+                </div>
+
+                @* Program *@
+                <div class="mb-3">
+                    <label asp-for="WorkoutProgramId" class="form-label fw-semibold">Program</label>
+                    @if (!Model.EnrolledPrograms.Any())
+                    {
+                        <div class="alert alert-warning mb-0">
+                            You are not enrolled in any programs.
+                            <a asp-controller="WorkoutPrograms" asp-action="Index">Browse programs →</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <select asp-for="WorkoutProgramId" class="form-select">
+                            <option value="">— Select a program —</option>
+                            @foreach (var up in Model.EnrolledPrograms)
+                            {
+                                <option value="@up.WorkoutProgramId">@up.WorkoutProgram.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="WorkoutProgramId" class="text-danger small"></span>
+                    }
+                </div>
+
+                @* Duration slider *@
+                <div class="mb-4">
+                    <label class="form-label fw-semibold d-flex justify-content-between">
+                        <span>Duration</span>
+                        <span class="duration-value" id="durationLabel">@Model.DurationMinutes min</span>
+                    </label>
+                    <input asp-for="DurationMinutes" type="range" class="form-range"
+                           min="5" max="180" step="5"
+                           oninput="document.getElementById('durationLabel').textContent = this.value + ' min'" />
+                    <div class="d-flex justify-content-between text-muted" style="font-size:.75rem">
+                        <span>5 min</span><span>180 min</span>
+                    </div>
+                </div>
+
+                @* Feeling *@
+                <div class="mb-4">
+                    <label class="form-label fw-semibold d-block mb-2">How did it feel?</label>
+                    <input type="hidden" asp-for="Feeling" id="feelingInput" />
+                    <div class="feeling-grid">
+                        @foreach (Feeling f in Enum.GetValues<Feeling>())
+                        {
+                            var emoji = f switch {
+                                Feeling.Great => "😄",
+                                Feeling.Good  => "🙂",
+                                Feeling.Okay  => "😐",
+                                _             => "😓"
+                            };
+                            var isSelected = Model.Feeling == f;
+                            <div class="feeling-card @(isSelected ? "selected" : "")"
+                                 data-feeling="@f" data-value="@((int)f)"
+                                 onclick="selectFeeling(this)">
+                                <span class="emoji">@emoji</span>
+                                <span class="label">@f</span>
+                            </div>
+                        }
+                    </div>
+                    <span asp-validation-for="Feeling" class="text-danger small"></span>
+                </div>
+
+                @* Notes *@
+                <div class="mb-4">
+                    <label asp-for="Notes" class="form-label fw-semibold">
+                        Notes <span class="text-muted fw-normal">(optional)</span>
+                    </label>
+                    <textarea asp-for="Notes" class="form-control" rows="2"
+                              placeholder="How did the session go? Any PRs?" maxlength="500"></textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-warning fw-bold px-5"
+                            @(!Model.EnrolledPrograms.Any() ? "disabled" : "")>
+                        Save Workout
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function selectFeeling(card) {
+            document.querySelectorAll('.feeling-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            document.getElementById('feelingInput').value = card.dataset.value;
+        }
+    </script>
+}

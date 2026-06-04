@@ -1,0 +1,88 @@
+@model IEnumerable<FitTrack.Models.ProgramReview>
+
+@{
+    ViewData["Title"] = "Admin — Reviews";
+}
+
+<style>
+    .star-filled { color: #c9a227; }
+    .star-empty  { color: #dee2e6; }
+</style>
+
+<div class="container mt-3">
+
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @msg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Program Reviews</h1>
+            <small class="text-muted">@Model.Count() review(s) total</small>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">&larr; Back to Programs</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Program</th>
+                        <th>User</th>
+                        <th class="text-center">Rating</th>
+                        <th>Comment</th>
+                        <th>Date</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">
+                                <a asp-controller="WorkoutPrograms" asp-action="Details" asp-route-id="@r.WorkoutProgramId"
+                                   class="text-decoration-none">@r.WorkoutProgram.Name</a>
+                            </td>
+                            <td class="text-muted small">@r.User?.UserName</td>
+                            <td class="text-center" style="white-space:nowrap">
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <span class="@(s <= r.Rating ? "star-filled" : "star-empty")">&#9733;</span>
+                                }
+                            </td>
+                            <td class="small" style="max-width:300px">
+                                <span class="text-truncate d-block" style="max-width:280px" title="@r.Comment">
+                                    @r.Comment
+                                </span>
+                            </td>
+                            <td class="text-muted small" style="white-space:nowrap">
+                                @r.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")
+                            </td>
+                            <td class="text-center">
+                                <form asp-action="DeleteReview" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@r.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this review by @r.User?.UserName?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No reviews yet.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

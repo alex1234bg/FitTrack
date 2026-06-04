@@ -1,0 +1,90 @@
+@model FitTrack.Models.ViewModels.UserProfileViewModel
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<div class="container mt-3" style="max-width:640px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">My Profile</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Edit Profile</h5>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <h6 class="fw-semibold text-muted text-uppercase small mb-3">Personal Info</h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <label asp-for="Height" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <input asp-for="Height" type="number" class="form-control" step="0.1" />
+                            <span class="input-group-text">cm</span>
+                        </div>
+                        <span asp-validation-for="Height" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Weight" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <input asp-for="Weight" type="number" class="form-control" step="0.1" />
+                            <span class="input-group-text">kg</span>
+                        </div>
+                        <span asp-validation-for="Weight" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Age" class="form-label fw-semibold"></label>
+                        <div class="input-group">
+                            <input asp-for="Age" type="number" class="form-control" />
+                            <span class="input-group-text">yrs</span>
+                        </div>
+                        <span asp-validation-for="Age" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Gender" class="form-label fw-semibold"></label>
+                        <select asp-for="Gender" class="form-select"
+                                asp-items="Html.GetEnumSelectList<Gender>()"></select>
+                        <span asp-validation-for="Gender" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <hr />
+
+                <h6 class="fw-semibold text-muted text-uppercase small mb-3">Fitness Profile</h6>
+
+                <div class="mb-3">
+                    <label asp-for="FitnessGoal" class="form-label fw-semibold"></label>
+                    <select asp-for="FitnessGoal" class="form-select"
+                            asp-items="Html.GetEnumSelectList<FitnessGoal>()"></select>
+                    <span asp-validation-for="FitnessGoal" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="FitnessLevel" class="form-label fw-semibold"></label>
+                    <select asp-for="FitnessLevel" class="form-select"
+                            asp-items="Html.GetEnumSelectList<FitnessLevel>()"></select>
+                    <span asp-validation-for="FitnessLevel" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,86 @@
+@model IEnumerable<FitTrack.Models.WorkoutProgram>
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Admin — Programs";
+}
+
+<div class="container mt-3">
+
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @msg
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Workout Programs</h1>
+            <small class="text-muted">@Model.Count() program(s) total</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Reviews" class="btn btn-outline-warning btn-sm">&#11088; Reviews</a>
+            <a asp-action="Users"   class="btn btn-outline-secondary btn-sm">&#128101; Users</a>
+            <a asp-action="Create"  class="btn btn-success">+ Create New Program</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Level</th>
+                        <th>Category</th>
+                        <th class="text-center">Duration</th>
+                        <th class="text-center">Exercises</th>
+                        <th class="text-center">Enrolled</th>
+                        <th class="text-center" style="min-width:280px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        var levelClass = p.Level switch
+                        {
+                            Level.Beginner     => "bg-success",
+                            Level.Intermediate => "bg-warning text-dark",
+                            Level.Advanced     => "bg-danger",
+                            _                  => "bg-secondary"
+                        };
+                        <tr>
+                            <td class="fw-semibold">@p.Name</td>
+                            <td><span class="badge @levelClass">@p.Level</span></td>
+                            <td><span class="badge bg-primary">@p.Category</span></td>
+                            <td class="text-center">@p.DurationWeeks wks</td>
+                            <td class="text-center">@p.ProgramExercises.Count</td>
+                            <td class="text-center">@p.UserPrograms.Count</td>
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                    <a asp-action="Edit" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a asp-action="ManageExercises" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-success">Exercises</a>
+                                    <a asp-action="ManageWeeklyPlans" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-purple" style="color:#6f42c1;border-color:#6f42c1;">Weekly Plan</a>
+                                    <a asp-action="Delete" asp-route-id="@p.Id"
+                                       class="btn btn-sm btn-outline-danger">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No programs yet. Create one above.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FitTrack</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/FitTrack.styles.css" asp-append-version="true" />
+    <style>
+        /* ── Navbar ──────────────────────────────────────────────────────── */
+        .ft-navbar {
+            background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%);
+            border-bottom: 1px solid rgba(255,255,255,.07);
+            padding: .75rem 0;
+        }
+
+        .ft-brand {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            text-decoration: none;
+            background: linear-gradient(90deg, #e0c97f 0%, #f5d97e 40%, #c9a227 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .ft-brand:hover { opacity: .88; }
+
+        /* Nav links */
+        .ft-nav-link {
+            color: rgba(255,255,255,.75) !important;
+            font-weight: 500;
+            font-size: .92rem;
+            padding: .45rem .7rem !important;
+            border-radius: 6px;
+            position: relative;
+            transition: color .2s;
+        }
+        .ft-nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 2px; left: 50%; right: 50%;
+            height: 2px;
+            background: linear-gradient(90deg, #e0c97f, #c9a227);
+            transition: left .22s ease, right .22s ease;
+            border-radius: 2px;
+        }
+        .ft-nav-link:hover,
+        .ft-nav-link.active {
+            color: #fff !important;
+        }
+        .ft-nav-link:hover::after,
+        .ft-nav-link.active::after {
+            left: 10%; right: 10%;
+        }
+
+        /* Admin dropdown */
+        .ft-admin-toggle {
+            color: #f87171 !important;
+            font-weight: 600;
+            font-size: .92rem;
+            padding: .4rem .75rem !important;
+            border-radius: 6px;
+            border: 1px solid rgba(248,113,113,.3);
+            transition: background .2s, border-color .2s;
+        }
+        .ft-admin-toggle:hover {
+            background: rgba(248,113,113,.1) !important;
+            border-color: rgba(248,113,113,.6) !important;
+            color: #fca5a5 !important;
+        }
+        .ft-admin-toggle::after { display: none; }
+        .ft-admin-chevron { font-size: .65rem; margin-left: .3rem; transition: transform .2s; }
+        .ft-admin-toggle.show .ft-admin-chevron { transform: rotate(180deg); }
+
+        .ft-dropdown-menu {
+            background: #1e1e30;
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px;
+            padding: .4rem;
+            min-width: 160px;
+            box-shadow: 0 12px 30px rgba(0,0,0,.5);
+        }
+        .ft-dropdown-item {
+            color: rgba(255,255,255,.8);
+            border-radius: 6px;
+            padding: .45rem .8rem;
+            font-size: .9rem;
+            transition: background .15s, color .15s;
+        }
+        .ft-dropdown-item:hover {
+            background: rgba(255,255,255,.08);
+            color: #fff;
+        }
+
+        /* Auth buttons */
+        .ft-btn-login {
+            color: rgba(255,255,255,.85) !important;
+            border: 1px solid rgba(255,255,255,.25);
+            border-radius: 8px;
+            font-size: .88rem;
+            font-weight: 500;
+            padding: .38rem 1rem !important;
+            transition: background .2s, border-color .2s, color .2s;
+        }
+        .ft-btn-login:hover {
+            background: rgba(255,255,255,.08) !important;
+            border-color: rgba(255,255,255,.5) !important;
+            color: #fff !important;
+        }
+        .ft-btn-register {
+            background: linear-gradient(135deg, #c9a227 0%, #e0c97f 100%);
+            color: #0d0d1a !important;
+            border: none;
+            border-radius: 8px;
+            font-size: .88rem;
+            font-weight: 700;
+            padding: .38rem 1.1rem !important;
+            transition: opacity .2s, transform .15s;
+        }
+        .ft-btn-register:hover {
+            opacity: .88;
+            transform: translateY(-1px);
+            color: #0d0d1a !important;
+        }
+
+        /* Avatar */
+        .ft-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c9a227, #e0c97f);
+            color: #0d0d1a;
+            font-size: .8rem;
+            font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .ft-avatar:hover { opacity: .85; }
+
+        /* Hamburger */
+        .ft-toggler {
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 8px;
+            padding: .3rem .5rem;
+        }
+        .ft-toggler .navbar-toggler-icon {
+            filter: invert(1);
+        }
+
+        /* Divider */
+        .ft-nav-divider {
+            width: 1px;
+            height: 20px;
+            background: rgba(255,255,255,.15);
+            margin: 0 .3rem;
+            align-self: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-md ft-navbar">
+            <div class="container-fluid px-3 px-md-4">
+
+                @* Brand *@
+                <a class="ft-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <span style="font-size:1.5rem;-webkit-text-fill-color:initial">&#127947;&#65039;</span>
+                    FitTrack
+                </a>
+
+                @* Hamburger *@
+                <button class="navbar-toggler ft-toggler ms-auto" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#mainNav"
+                        aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="mainNav">
+                    @* Left links *@
+                    <ul class="navbar-nav me-auto gap-1 mt-2 mt-md-0">
+                        <li class="nav-item">
+                            <a class="nav-link ft-nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")"
+                               asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link ft-nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "WorkoutPrograms" ? "active" : "")"
+                               asp-area="" asp-controller="WorkoutPrograms" asp-action="Index">Programs</a>
+                        </li>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link ft-nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Progress" ? "active" : "")"
+                                   asp-area="" asp-controller="Progress" asp-action="Index">Progress</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link ft-nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Calendar" ? "active" : "")"
+                                   asp-area="" asp-controller="Calendar" asp-action="Index">&#128197; Calendar</a>
+                            </li>
+                        }
+                    </ul>
+
+                    @* Right links *@
+                    <ul class="navbar-nav align-items-md-center gap-1 mb-2 mb-md-0">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            @* Admin dropdown *@
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link ft-admin-toggle dropdown-toggle" href="#"
+                                       id="adminDrop" role="button"
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        &#9881;&#65039; Admin
+                                        <span class="ft-admin-chevron">&#9660;</span>
+                                    </a>
+                                    <ul class="dropdown-menu ft-dropdown-menu dropdown-menu-end" aria-labelledby="adminDrop">
+                                        <li>
+                                            <a class="dropdown-item ft-dropdown-item"
+                                               asp-area="" asp-controller="Admin" asp-action="Index">
+                                                &#128218; Programs
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item ft-dropdown-item"
+                                               asp-area="" asp-controller="Admin" asp-action="Users">
+                                                &#128101; Users
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item ft-dropdown-item"
+                                               asp-area="" asp-controller="Admin" asp-action="Reviews">
+                                                &#11088; Reviews
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            }
+
+                            <div class="ft-nav-divider d-none d-md-block"></div>
+
+                            @* My Profile with avatar *@
+                            <li class="nav-item">
+                                <a class="nav-link ft-nav-link d-flex align-items-center gap-2
+                                           @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")"
+                                   asp-area="" asp-controller="Profile" asp-action="Index">
+                                    <div class="ft-avatar">@(User.Identity?.Name?[0].ToString().ToUpper())</div>
+                                    <span>My Profile</span>
+                                </a>
+                            </li>
+
+                            @* Logout *@
+                            <li class="nav-item">
+                                <form asp-area="" asp-controller="Account" asp-action="Logout"
+                                      method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="nav-link ft-nav-link btn btn-link p-0 border-0">
+                                        Logout
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link ft-btn-login"
+                                   asp-area="" asp-controller="Account" asp-action="Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link ft-btn-register"
+                                   asp-area="" asp-controller="Account" asp-action="Register">Get Started</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+
+    <footer class="border-top footer text-muted mt-4">
+        <div class="container py-3">
+            &copy; 2026 FitTrack &mdash;
+            <a asp-area="" asp-controller="Home" asp-action="Privacy" class="text-muted">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,69 @@
+@model FitTrack.Models.WorkoutProgram
+
+@{
+    ViewData["Title"] = $"Admin — Delete: {Model.Name}";
+    int workoutLogCount = ViewBag.WorkoutLogCount ?? 0;
+}
+
+<div class="container mt-4" style="max-width:620px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+            <li class="breadcrumb-item active">Delete: @Model.Name</li>
+        </ol>
+    </nav>
+
+    <div class="alert alert-danger d-flex gap-2 align-items-start" role="alert">
+        <span style="font-size:1.3rem">&#9888;&#65039;</span>
+        <div>
+            <strong>This action cannot be undone.</strong>
+            All related data will be permanently deleted.
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Delete Program: @Model.Name</h5>
+        </div>
+        <div class="card-body p-4">
+
+            <p class="text-muted mb-4">
+                You are about to permanently delete this program and all data associated with it.
+                The following records will be removed:
+            </p>
+
+            <ul class="list-group list-group-flush mb-4">
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <span>&#128100; Enrolled users</span>
+                    <span class="badge bg-secondary rounded-pill">@Model.UserPrograms.Count</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <span>&#127947; Exercises</span>
+                    <span class="badge bg-secondary rounded-pill">@Model.ProgramExercises.Count</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <span>&#11088; Reviews</span>
+                    <span class="badge bg-secondary rounded-pill">@Model.ProgramReviews.Count</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <span>&#128200; Workout logs</span>
+                    <span class="badge bg-secondary rounded-pill">@workoutLogCount</span>
+                </li>
+            </ul>
+
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger px-4 fw-semibold">
+                        Yes, Delete Permanently
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+</div>

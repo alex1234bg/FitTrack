@@ -1,0 +1,129 @@
+@model IEnumerable<FitTrack.Models.WorkoutProgram>
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Workout Programs";
+}
+
+<style>
+    .star-filled { color: #c9a227; }
+    .star-empty  { color: #dee2e6; }
+    .prog-card { transition: transform .2s, box-shadow .2s; }
+    .prog-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.13) !important; }
+</style>
+
+<div class="container mt-3">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Workout Programs</h1>
+</div>
+
+@* Filter form *@
+<form method="get" class="card card-body bg-light mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-sm-4">
+            <label class="form-label fw-semibold">Level</label>
+            <select name="level" class="form-select">
+                <option value="">All Levels</option>
+                @foreach (var lvl in Enum.GetValues<Level>())
+                {
+                    var selected = (ViewBag.SelectedLevel as Level?) == lvl ? "selected" : null;
+                    <option value="@lvl" selected="@selected">@lvl</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-4">
+            <label class="form-label fw-semibold">Category</label>
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                @foreach (var cat in Enum.GetValues<Category>())
+                {
+                    var selected = (ViewBag.SelectedCategory as Category?) == cat ? "selected" : null;
+                    <option value="@cat" selected="@selected">@cat</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary w-100">Filter</button>
+            <a asp-action="Index" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No programs match your filters. <a asp-action="Index">Clear filters</a></div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        @foreach (var program in Model)
+        {
+            var reviewCount = program.ProgramReviews.Count;
+            var avgRating   = reviewCount > 0 ? program.ProgramReviews.Average(r => r.Rating) : 0.0;
+            var fullStars   = (int)Math.Round(avgRating);
+
+            <div class="col">
+                <div class="card h-100 shadow-sm prog-card">
+                    @if (!string.IsNullOrEmpty(program.ImageUrl))
+                    {
+                        <img src="@program.ImageUrl" class="card-img-top" alt="@program.Name" style="height:180px;object-fit:cover;">
+                    }
+                    else
+                    {
+                        <div class="card-img-top d-flex align-items-center justify-content-center bg-secondary text-white" style="height:180px;">
+                            <span class="fs-1">&#127947;</span>
+                        </div>
+                    }
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">@program.Name</h5>
+
+                        @* Star rating row *@
+                        <div class="d-flex align-items-center gap-1 mb-2">
+                            @for (int s = 1; s <= 5; s++)
+                            {
+                                <span class="@(s <= fullStars ? "star-filled" : "star-empty")" style="font-size:1rem;">&#9733;</span>
+                            }
+                            @if (reviewCount > 0)
+                            {
+                                <span class="text-muted small ms-1">@avgRating.ToString("F1") (@reviewCount)</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small ms-1">No reviews yet</span>
+                            }
+                        </div>
+
+                        <p class="card-text text-muted flex-grow-1">
+                            @(program.Description.Length > 100 ? program.Description[..100] + "…" : program.Description)
+                        </p>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @{
+                                var levelClass = program.Level switch
+                                {
+                                    Level.Beginner     => "bg-success",
+                                    Level.Intermediate => "bg-warning text-dark",
+                                    Level.Advanced     => "bg-danger",
+                                    _                  => "bg-secondary"
+                                };
+                                var categoryClass = program.Category switch
+                                {
+                                    Category.Strength    => "bg-primary",
+                                    Category.Cardio      => "bg-info text-dark",
+                                    Category.Flexibility => "bg-purple",
+                                    _                    => "bg-secondary"
+                                };
+                            }
+                            <span class="badge @levelClass">@program.Level</span>
+                            <span class="badge @categoryClass">@program.Category</span>
+                            <span class="badge bg-dark">@(program.WeeklyPlans.Count > 0 ? program.WeeklyPlans.Count : program.DurationWeeks) wks</span>
+                        </div>
+                        <a asp-action="Details" asp-route-id="@program.Id" class="btn btn-outline-primary mt-auto">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+</div> @* /container *@

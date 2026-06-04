@@ -1,0 +1,32 @@
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build output
+[Bb]in/
+[Oo]bj/
+
+## NuGet
+*.nupkg
+.nuget/
+packages/
+!**/[Pp]ackages/build/
+
+## ASP.NET Core
+wwwroot/lib/
+*.pfx
+
+## Logs
+*.log
+logs/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## User secrets (never commit)
+**/secrets.json

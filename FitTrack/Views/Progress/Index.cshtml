@@ -1,0 +1,291 @@
+@model FitTrack.Models.ViewModels.ProgressDashboardViewModel
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "My Progress";
+}
+
+<style>
+    .pg-hero {
+        background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%);
+        color: #fff;
+        padding: 2.5rem 0 4rem;
+    }
+    .pg-stat-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.1);
+        padding: 1.4rem 1.5rem;
+        margin-top: -3rem;
+        transition: transform .2s;
+    }
+    .pg-stat-card:hover { transform: translateY(-3px); }
+    .pg-stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .pg-stat-label { font-size: .8rem; color: #6c757d; text-transform: uppercase; letter-spacing: .05em; }
+    .pg-gold { color: #c9a227; }
+    .pg-section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        color: #495057;
+        margin-bottom: .85rem;
+    }
+    /* Feeling badges */
+    .feeling-great  { background: #d1fae5; color: #065f46; }
+    .feeling-good   { background: #dbeafe; color: #1e40af; }
+    .feeling-okay   { background: #fef3c7; color: #92400e; }
+    .feeling-tough  { background: #fee2e2; color: #991b1b; }
+    .feeling-badge  { font-size: .78rem; font-weight: 600; padding: .25rem .6rem; border-radius: 20px; }
+    /* Timeline */
+    .timeline-item { position: relative; padding-left: 2.2rem; margin-bottom: 1.2rem; }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: .55rem; top: 0; bottom: -1.2rem;
+        width: 2px;
+        background: #e9ecef;
+    }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-dot {
+        position: absolute;
+        left: 0; top: .2rem;
+        width: 1.1rem; height: 1.1rem;
+        border-radius: 50%;
+        background: #c9a227;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #c9a227;
+    }
+    /* Log weight form */
+    .log-weight-card { border: none; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+</style>
+
+@* ── Hero ────────────────────────────────────────────────────────────────── *@
+<div class="pg-hero">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h1 class="h2 fw-bold mb-1">My Progress</h1>
+                <p class="text-white-50 mb-0">Track your fitness journey over time</p>
+            </div>
+            <a asp-action="LogWorkout" class="btn btn-warning fw-semibold px-4">
+                + Log Today's Workout
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    @* ── Stat cards ──────────────────────────────────────────────────────── *@
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="pg-stat-card text-center">
+                <div class="pg-stat-value pg-gold">@Model.TotalWorkouts</div>
+                <div class="pg-stat-label">Total Workouts</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="pg-stat-card text-center">
+                <div class="pg-stat-value @(Model.CurrentStreak > 0 ? "text-danger" : "text-muted")">
+                    @Model.CurrentStreak 🔥
+                </div>
+                <div class="pg-stat-label">Day Streak</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="pg-stat-card text-center">
+                @if (Model.WeightChange.HasValue)
+                {
+                    var wc = Model.WeightChange.Value;
+                    var cls = wc < 0 ? "text-success" : (wc > 0 ? "text-danger" : "text-muted");
+                    var sign = wc > 0 ? "+" : "";
+                    <div class="pg-stat-value @cls">@($"{sign}{wc:F1}") kg</div>
+                }
+                else
+                {
+                    <div class="pg-stat-value text-muted">—</div>
+                }
+                <div class="pg-stat-label">Weight Change</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="pg-stat-card text-center">
+                <div class="pg-stat-value text-primary">@Model.ActivePrograms</div>
+                <div class="pg-stat-label">Active Programs</div>
+            </div>
+        </div>
+    </div>
+
+    @* Flash messages *@
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @msg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @err <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+
+        @* ── Left column: recent workouts + weight chart ────────────────── *@
+        <div class="col-lg-7">
+
+            @* Recent Workouts *@
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="pg-section-title mb-0">Recent Workouts</div>
+                    <a asp-action="WorkoutHistory" class="small text-muted">View all →</a>
+                </div>
+
+                @if (!Model.RecentWorkouts.Any())
+                {
+                    <div class="text-center text-muted py-4 bg-light rounded-3">
+                        No workouts logged yet.
+                        <a asp-action="LogWorkout">Log your first one!</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="ps-1 pt-2">
+                        @foreach (var w in Model.RecentWorkouts)
+                        {
+                            var (emoji, cls) = w.Feeling switch {
+                                Feeling.Great => ("😄", "feeling-great"),
+                                Feeling.Good  => ("🙂", "feeling-good"),
+                                Feeling.Okay  => ("😐", "feeling-okay"),
+                                _             => ("😓", "feeling-tough")
+                            };
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <div class="fw-semibold small">@w.WorkoutProgram.Name</div>
+                                        <div class="text-muted" style="font-size:.8rem">
+                                            @w.LoggedOn.ToLocalTime().ToString("ddd, MMM d") &bull; @w.DurationMinutes min
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(w.Notes))
+                                        {
+                                            <div class="text-muted fst-italic" style="font-size:.78rem">@w.Notes</div>
+                                        }
+                                    </div>
+                                    <span class="feeling-badge @cls flex-shrink-0">@emoji @w.Feeling</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* Weight Chart *@
+            <div class="card border-0 rounded-3 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Weight Over Time</span>
+                    <a asp-action="WeightHistory" class="btn btn-sm btn-outline-light">Full history</a>
+                </div>
+                <div class="card-body">
+                    @if (Model.WeightChartData.Count < 2)
+                    {
+                        <div class="text-center text-muted py-3">
+                            Log at least 2 weight entries to see the chart.
+                        </div>
+                    }
+                    else
+                    {
+                        <canvas id="weightChart" height="110"></canvas>
+                    }
+                </div>
+            </div>
+
+        </div>
+
+        @* ── Right column: log weight form ───────────────────────────────── *@
+        <div class="col-lg-5">
+            <div class="pg-section-title">Log Weight</div>
+            <div class="log-weight-card card">
+                <div class="card-body p-4">
+                    <form asp-action="LogWeight" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Weight (kg)</label>
+                            <input type="number" name="weight" step="0.1" min="20" max="500"
+                                   class="form-control form-control-lg"
+                                   placeholder="@(Model.LatestWeight.HasValue ? Model.LatestWeight!.Value.ToString("F1") : "75.0")"
+                                   required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Date</label>
+                            <input type="date" name="loggedOn" class="form-control"
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold small">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="text" name="notes" class="form-control"
+                                   placeholder="e.g. morning weigh-in" maxlength="500" />
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100 fw-semibold">Save Weight</button>
+                    </form>
+                </div>
+            </div>
+
+            @if (Model.StartingWeight.HasValue || Model.LatestWeight.HasValue)
+            {
+                <div class="card border-0 rounded-3 shadow-sm mt-3">
+                    <div class="card-body py-3 px-4">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Starting</span><span>Current</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold fs-5">
+                            <span>@(Model.StartingWeight.HasValue ? $"{Model.StartingWeight:F1} kg" : "—")</span>
+                            <span>@(Model.LatestWeight.HasValue ? $"{Model.LatestWeight:F1} kg" : "—")</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.WeightChartData.Count >= 2)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+            const labels = [@Html.Raw(string.Join(",", Model.WeightChartData.Select(w => $"\"{w.LoggedOn.ToLocalTime():MMM d}\"")))];
+            const data   = [@string.Join(",", Model.WeightChartData.Select(w => w.Weight.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)))];
+
+            new Chart(document.getElementById('weightChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data,
+                        borderColor: '#c9a227',
+                        backgroundColor: 'rgba(201,162,39,.12)',
+                        tension: 0.35,
+                        pointBackgroundColor: '#c9a227',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { callback: v => v + ' kg' } }
+                    }
+                }
+            });
+        </script>
+    }
+}

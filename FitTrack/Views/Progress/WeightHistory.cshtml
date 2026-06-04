@@ -1,0 +1,174 @@
+@model IEnumerable<FitTrack.Models.WeightLog>
+
+@{
+    ViewData["Title"] = "Weight History";
+    var logs     = Model.ToList();
+    var asc      = logs.OrderBy(w => w.LoggedOn).ToList();
+    var hasChart = asc.Count >= 2;
+}
+
+<style>
+    .wh-card { border: none; border-radius: 14px; box-shadow: 0 2px 14px rgba(0,0,0,.08); }
+</style>
+
+<div class="container mt-4" style="max-width:820px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Progress</a></li>
+            <li class="breadcrumb-item active">Weight History</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Weight History</h1>
+            <small class="text-muted">@logs.Count entr@(logs.Count == 1 ? "y" : "ies") logged</small>
+        </div>
+    </div>
+
+    @if (TempData["Success"] is string msg)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @msg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* ── Add new entry form ───────────────────────────────────────────────── *@
+    <div class="wh-card card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h6 class="mb-0 fw-semibold">+ Add Weight Entry</h6>
+        </div>
+        <div class="card-body p-3">
+            <form asp-action="LogWeight" method="post">
+                @Html.AntiForgeryToken()
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-3">
+                        <label class="form-label fw-semibold small">Weight (kg)</label>
+                        <input type="number" name="weight" step="0.1" min="20" max="500"
+                               class="form-control" placeholder="75.0" required />
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-semibold small">Date</label>
+                        <input type="date" name="loggedOn" class="form-control"
+                               value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-semibold small">Notes (optional)</label>
+                        <input type="text" name="notes" class="form-control"
+                               placeholder="e.g. morning weigh-in" maxlength="500" />
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="submit" class="btn btn-dark w-100">Save</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* ── Chart ────────────────────────────────────────────────────────────── *@
+    @if (hasChart)
+    {
+        <div class="wh-card card mb-4">
+            <div class="card-header bg-dark text-white">
+                <span class="fw-semibold">Weight Over Time</span>
+            </div>
+            <div class="card-body p-3">
+                <canvas id="weightChart" height="90"></canvas>
+            </div>
+        </div>
+    }
+
+    @* ── Table ────────────────────────────────────────────────────────────── *@
+    @if (!logs.Any())
+    {
+        <div class="text-center text-muted py-5">
+            No weight entries yet. Add your first one above.
+        </div>
+    }
+    else
+    {
+        <div class="wh-card card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">Weight</th>
+                            <th class="text-end">Change</th>
+                            <th>Notes</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            float? prev = null;
+                        }
+                        @foreach (var log in logs)
+                        {
+                            string changeTxt = "—";
+                            string changeCls = "text-muted";
+                            if (prev.HasValue)
+                            {
+                                var diff = log.Weight - prev.Value;
+                                var sign = diff > 0 ? "+" : "";
+                                changeTxt = $"{sign}{diff:F1} kg";
+                                changeCls = diff < 0 ? "text-success fw-semibold" : (diff > 0 ? "text-danger fw-semibold" : "text-muted");
+                            }
+                            prev = log.Weight;
+                            <tr>
+                                <td>@log.LoggedOn.ToLocalTime().ToString("ddd, MMM d yyyy")</td>
+                                <td class="text-end fw-bold">@log.Weight.ToString("F1") kg</td>
+                                <td class="text-end @changeCls">@changeTxt</td>
+                                <td class="text-muted small">@(log.Notes ?? "—")</td>
+                                <td class="text-end">
+                                    <form asp-action="DeleteWeight" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@log.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Delete this entry?')">✕</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @if (hasChart)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+            const labels = [@Html.Raw(string.Join(",", asc.Select(w => $"\"{w.LoggedOn.ToLocalTime():MMM d, yyyy}\"")))];
+            const data   = [@string.Join(",", asc.Select(w => w.Weight.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)))];
+
+            new Chart(document.getElementById('weightChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data,
+                        borderColor: '#c9a227',
+                        backgroundColor: 'rgba(201,162,39,.12)',
+                        tension: 0.35,
+                        pointBackgroundColor: '#c9a227',
+                        pointRadius: 4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { callback: v => v + ' kg' } }
+                    }
+                }
+            });
+        </script>
+    }
+}

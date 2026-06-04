@@ -1,0 +1,272 @@
+@model FitTrack.Models.ViewModels.UserProfileViewModel
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Complete Your Profile";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4" style="max-width:700px">
+
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">Welcome to FitTrack! &#127939;</h2>
+        <p class="text-muted">Let's set up your profile so we can personalise your experience.</p>
+    </div>
+
+    @* ── Progress bar ──────────────────────────────────────────────────── *@
+    <div class="mb-4">
+        <div class="d-flex justify-content-between mb-1">
+            <small id="step-label" class="fw-semibold text-primary">Step 1 of 3 — Personal Info</small>
+            <small id="step-pct" class="text-muted">33%</small>
+        </div>
+        <div class="progress" style="height:8px">
+            <div id="progress-bar" class="progress-bar bg-primary progress-bar-striped"
+                 role="progressbar" style="width:33%" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+    </div>
+
+    <form asp-action="Setup" method="post" id="setup-form" novalidate>
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        @* ══════════════════════════════════════════════════════════════════
+           STEP 1 — Personal Info
+        ══════════════════════════════════════════════════════════════════ *@
+        <div id="step-1" class="step-panel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-4">&#128100; Personal Information</h5>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label asp-for="Height" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <input asp-for="Height" type="number" class="form-control"
+                                       step="0.1" min="100" max="250" placeholder="175" />
+                                <span class="input-group-text">cm</span>
+                            </div>
+                            <span asp-validation-for="Height" class="text-danger small"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="Weight" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <input asp-for="Weight" type="number" class="form-control"
+                                       step="0.1" min="30" max="300" placeholder="70" />
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            <span asp-validation-for="Weight" class="text-danger small"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="Age" class="form-label fw-semibold"></label>
+                            <div class="input-group">
+                                <input asp-for="Age" type="number" class="form-control"
+                                       min="10" max="100" placeholder="25" />
+                                <span class="input-group-text">yrs</span>
+                            </div>
+                            <span asp-validation-for="Age" class="text-danger small"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="Gender" class="form-label fw-semibold"></label>
+                            <select asp-for="Gender" class="form-select"
+                                    asp-items="Html.GetEnumSelectList<Gender>()">
+                            </select>
+                            <span asp-validation-for="Gender" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="button" class="btn btn-primary px-5" onclick="goToStep(2)">
+                            Next &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ══════════════════════════════════════════════════════════════════
+           STEP 2 — Fitness Goal
+        ══════════════════════════════════════════════════════════════════ *@
+        <div id="step-2" class="step-panel d-none">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">&#127919; What's Your Main Goal?</h5>
+                    <p class="text-muted small mb-4">We'll recommend programs that match your objective.</p>
+
+                    @{
+                        var goals = new[]
+                        {
+                            (FitnessGoal.LoseWeight,          "&#128197;", "Lose Weight",          "Burn fat through cardio and calorie-burning workouts"),
+                            (FitnessGoal.BuildMuscle,         "&#128170;", "Build Muscle",         "Gain strength and size with progressive resistance training"),
+                            (FitnessGoal.ImproveEndurance,    "&#127939;", "Improve Endurance",    "Boost stamina and cardiovascular fitness"),
+                            (FitnessGoal.IncreaseFlexibility, "&#129340;", "Increase Flexibility", "Improve mobility and reduce injury risk"),
+                            (FitnessGoal.StayHealthy,         "&#10084;",  "Stay Healthy",         "Maintain overall wellness and an active lifestyle")
+                        };
+                    }
+
+                    <div class="row g-3" id="goal-cards">
+                        @foreach (var (goal, icon, label, desc) in goals)
+                        {
+                            <div class="col-12">
+                                <label class="goal-card card border-2 cursor-pointer w-100 mb-0"
+                                       data-value="@((int)goal)">
+                                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                                        <span class="fs-2 lh-1">@Html.Raw(icon)</span>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold">@label</div>
+                                            <small class="text-muted">@desc</small>
+                                        </div>
+                                        <span class="goal-check text-success fs-4 d-none">&#10003;</span>
+                                    </div>
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    <input type="hidden" asp-for="FitnessGoal" id="FitnessGoal-input" />
+                    <span asp-validation-for="FitnessGoal" class="text-danger small"></span>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary px-4" onclick="goToStep(1)">&larr; Back</button>
+                        <button type="button" class="btn btn-primary px-5" onclick="goToStep(3)">Next &rarr;</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ══════════════════════════════════════════════════════════════════
+           STEP 3 — Fitness Level
+        ══════════════════════════════════════════════════════════════════ *@
+        <div id="step-3" class="step-panel d-none">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2">&#128200; Your Current Fitness Level</h5>
+                    <p class="text-muted small mb-4">Be honest — we'll match you with programs at the right intensity.</p>
+
+                    @{
+                        var levels = new[]
+                        {
+                            (FitnessLevel.Beginner,     "&#127808;", "Beginner",     "New to exercise or returning after a long break", "bg-success"),
+                            (FitnessLevel.Intermediate, "&#128293;", "Intermediate", "Regularly active for 6+ months with solid form",  "bg-warning"),
+                            (FitnessLevel.Advanced,     "&#9889;",   "Advanced",     "Consistently training for 2+ years at high intensity", "bg-danger")
+                        };
+                    }
+
+                    <div class="row g-3" id="level-cards">
+                        @foreach (var (lvl, icon, label, desc, badgeClass) in levels)
+                        {
+                            <div class="col-12">
+                                <label class="level-card card border-2 cursor-pointer w-100 mb-0"
+                                       data-value="@((int)lvl)">
+                                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                                        <span class="fs-2 lh-1">@Html.Raw(icon)</span>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="fw-semibold">@label</span>
+                                                <span class="badge @badgeClass">@label</span>
+                                            </div>
+                                            <small class="text-muted">@desc</small>
+                                        </div>
+                                        <span class="level-check text-success fs-4 d-none">&#10003;</span>
+                                    </div>
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    <input type="hidden" asp-for="FitnessLevel" id="FitnessLevel-input" />
+                    <span asp-validation-for="FitnessLevel" class="text-danger small"></span>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary px-4" onclick="goToStep(2)">&larr; Back</button>
+                        <button type="submit" class="btn btn-success px-5 fw-semibold">
+                            &#10003; Complete Setup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .goal-card, .level-card {
+        transition: border-color .15s, box-shadow .15s;
+        border-color: #dee2e6 !important;
+    }
+    .goal-card.selected, .level-card.selected {
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 3px rgba(13,110,253,.15);
+        background: #f0f6ff;
+    }
+</style>
+<script>
+    const steps = [null, 'step-1', 'step-2', 'step-3'];
+    const labels = [null, 'Step 1 of 3 — Personal Info', 'Step 2 of 3 — Fitness Goal', 'Step 3 of 3 — Fitness Level'];
+    const pcts   = [null, 33, 66, 100];
+    let current = 1;
+
+    function goToStep(n) {
+        document.getElementById(steps[current]).classList.add('d-none');
+        document.getElementById(steps[n]).classList.remove('d-none');
+        current = n;
+        document.getElementById('step-label').textContent = labels[n];
+        document.getElementById('step-pct').textContent = pcts[n] + '%';
+        const bar = document.getElementById('progress-bar');
+        bar.style.width = pcts[n] + '%';
+        bar.setAttribute('aria-valuenow', pcts[n]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Goal card selection
+    document.querySelectorAll('.goal-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.goal-card').forEach(c => {
+                c.classList.remove('selected');
+                c.querySelector('.goal-check').classList.add('d-none');
+            });
+            card.classList.add('selected');
+            card.querySelector('.goal-check').classList.remove('d-none');
+            document.getElementById('FitnessGoal-input').value = card.dataset.value;
+        });
+    });
+
+    // Level card selection
+    document.querySelectorAll('.level-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.level-card').forEach(c => {
+                c.classList.remove('selected');
+                c.querySelector('.level-check').classList.add('d-none');
+            });
+            card.classList.add('selected');
+            card.querySelector('.level-check').classList.remove('d-none');
+            document.getElementById('FitnessLevel-input').value = card.dataset.value;
+        });
+    });
+
+    // If server returned validation errors, show all steps
+    const hasErrors = document.querySelector('.alert-danger') !== null;
+    if (hasErrors) {
+        steps.slice(1).forEach(id => document.getElementById(id).classList.remove('d-none'));
+        document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('step-label').textContent = 'Please review all fields';
+        document.getElementById('step-pct').textContent = '100%';
+    }
+
+    // Re-select previously chosen values on error return
+    const savedGoal  = document.getElementById('FitnessGoal-input').value;
+    const savedLevel = document.getElementById('FitnessLevel-input').value;
+    if (savedGoal !== '') {
+        const gc = document.querySelector(`.goal-card[data-value="${savedGoal}"]`);
+        if (gc) { gc.classList.add('selected'); gc.querySelector('.goal-check').classList.remove('d-none'); }
+    }
+    if (savedLevel !== '') {
+        const lc = document.querySelector(`.level-card[data-value="${savedLevel}"]`);
+        if (lc) { lc.classList.add('selected'); lc.querySelector('.level-check').classList.remove('d-none'); }
+    }
+</script>
+}

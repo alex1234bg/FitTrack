@@ -1,0 +1,67 @@
+@model FitTrack.Models.WeeklyPlan
+
+@{
+    ViewData["Title"] = $"Admin — Edit Week {Model.WeekNumber}";
+}
+
+<div class="container mt-3">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+            <li class="breadcrumb-item">
+                <a asp-action="ManageWeeklyPlans" asp-route-id="@Model.WorkoutProgramId">Weekly Plans</a>
+            </li>
+            <li class="breadcrumb-item active">Edit Week @Model.WeekNumber</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background:#6f42c1;">
+                    <h5 class="mb-0">Edit Week</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="EditWeek" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="WorkoutProgramId" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="WeekNumber" class="form-label fw-semibold"></label>
+                            <input asp-for="WeekNumber" type="number" class="form-control" min="1" max="52" />
+                            <span asp-validation-for="WeekNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label fw-semibold"></label>
+                            <input asp-for="Title" class="form-control" />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Description" class="form-label fw-semibold">
+                                Description <span class="text-muted fw-normal">(optional)</span>
+                            </label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn text-white px-4" style="background:#6f42c1;">Save Changes</button>
+                            <a asp-action="ManageWeeklyPlans" asp-route-id="@Model.WorkoutProgramId"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,588 @@
+@model FitTrack.Models.WorkoutProgram
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = Model.Name;
+
+    var levelClass = Model.Level switch
+    {
+        Level.Beginner     => "bg-success",
+        Level.Intermediate => "bg-warning text-dark",
+        Level.Advanced     => "bg-danger",
+        _                  => "bg-secondary"
+    };
+
+    var categoryClass = Model.Category switch
+    {
+        Category.Strength    => "bg-primary",
+        Category.Cardio      => "bg-info text-dark",
+        Category.Flexibility => "bg-purple",
+        _                    => "bg-secondary"
+    };
+
+    double? avgRating    = ViewBag.AverageRating as double?;
+    int     reviewCount  = Model.ProgramReviews.Count;
+    int     fullStars    = avgRating.HasValue ? (int)Math.Round(avgRating.Value) : 0;
+    bool    userHasReviewed = ViewBag.UserHasReviewed == true;
+    int     enrolledCount   = ViewBag.EnrolledCount is int ec ? ec : 0;
+
+    var weekColors = new[] { "#0d6efd", "#198754", "#6f42c1", "#fd7e14", "#0dcaf0" };
+    var weeks = Model.WeeklyPlans.OrderBy(w => w.WeekNumber).ToList();
+
+    int totalExercises = weeks.SelectMany(w => w.Days).SelectMany(d => d.Exercises).Count();
+}
+
+<style>
+    /* ── Stars ──────────────────────────────────────────────────────────────── */
+    .star-filled { color: #c9a227; }
+    .star-empty  { color: #dee2e6; }
+
+    .star-selector { display:flex; flex-direction:row-reverse; justify-content:flex-end; gap:.15rem; }
+    .star-selector input { display:none; }
+    .star-selector label { font-size:1.8rem; color:#dee2e6; cursor:pointer; transition:color .1s; line-height:1; }
+    .star-selector input:checked ~ label,
+    .star-selector label:hover,
+    .star-selector label:hover ~ label { color:#c9a227; }
+
+    /* ── Stat cards ─────────────────────────────────────────────────────────── */
+    .stat-card { border-radius:12px; padding:1rem 1.25rem; background:#fff;
+                 box-shadow:0 1px 8px rgba(0,0,0,.07); border-left:4px solid transparent; }
+    .stat-card .stat-value { font-size:1.8rem; font-weight:800; line-height:1.1; }
+    .stat-card .stat-label { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+
+    /* ── Review cards ───────────────────────────────────────────────────────── */
+    .review-card { border-left:3px solid #e9ecef; padding:1rem 1rem 1rem 1.25rem;
+                   margin-bottom:1rem; background:#fff; border-radius:0 10px 10px 0;
+                   box-shadow:0 1px 5px rgba(0,0,0,.06); }
+    .review-card:hover { border-left-color:#c9a227; }
+    .review-avatar { width:38px; height:38px; border-radius:50%;
+                     background:linear-gradient(135deg,#c9a227,#e0c97f);
+                     color:#0d0d1a; font-size:.85rem; font-weight:800;
+                     display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    /* ── Weekly plan ────────────────────────────────────────────────────────── */
+    .week-accordion-btn { background:#fff !important; border:none; width:100%;
+                          padding:.9rem 1.1rem; display:flex; align-items:center;
+                          gap:.75rem; cursor:pointer; transition:background .15s; }
+    .week-accordion-btn:hover { background:#f8f9fa !important; }
+    .week-accordion-btn:not(.collapsed) { background:#f8f9fa !important; }
+    .week-accent { width:6px; height:36px; border-radius:3px; flex-shrink:0; }
+
+    .week-item { border:1px solid #e9ecef; border-radius:12px; overflow:hidden;
+                 box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:1.25rem;
+                 transition:box-shadow .2s; }
+    .week-item:hover { box-shadow:0 4px 16px rgba(0,0,0,.11); }
+
+    /* Day pill tabs */
+    .day-pills .nav-link { border-radius:20px; padding:.3rem .9rem; font-size:.85rem;
+                            color:#495057; border:1px solid #dee2e6; background:#fff;
+                            transition:all .15s; }
+    .day-pills .nav-link:hover { background:#f1f3f5; }
+    .day-pills .nav-link.active { color:#fff; border-color:transparent; }
+
+    /* Exercise table */
+    .ex-table { font-size:.875rem; }
+    .ex-table thead th { font-size:.75rem; text-transform:uppercase; letter-spacing:.04em;
+                          color:#6c757d; border-bottom:1px solid #dee2e6; padding:.5rem .6rem;
+                          font-weight:600; background:transparent; }
+    .ex-table tbody tr { border-bottom:1px solid #f1f3f5; }
+    .ex-table tbody tr:nth-child(even) { background:#fafbfc; }
+    .ex-table tbody tr:last-child { border-bottom:none; }
+    .ex-table td { padding:.45rem .6rem; vertical-align:top; border:none; }
+
+    .focus-pill { display:inline-block; padding:.2rem .75rem; border-radius:20px;
+                  font-size:.78rem; font-weight:600; letter-spacing:.03em; }
+
+    /* Empty state */
+    .empty-plan { text-align:center; padding:3rem 1rem; color:#adb5bd; }
+    .empty-plan .empty-icon { font-size:3.5rem; margin-bottom:.75rem; display:block; }
+</style>
+
+<div class="container mt-3">
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+    </ol>
+</nav>
+
+@* ══════════════════════════════════════════════════════════════════════════════
+   TOP SECTION — two columns
+   ══════════════════════════════════════════════════════════════════════════════ *@
+<div class="row g-4 mb-5">
+
+    @* ── Left: image + info card ────────────────────────────────────────────── *@
+    <div class="col-md-5">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <img src="@Model.ImageUrl" class="img-fluid rounded shadow mb-3" alt="@Model.Name">
+        }
+        else
+        {
+            <div class="d-flex align-items-center justify-content-center rounded mb-3 shadow-sm"
+                 style="height:240px;background:linear-gradient(135deg,#1a1a2e,#16213e);">
+                <span style="font-size:5rem;">&#127947;</span>
+            </div>
+        }
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h1 class="h3 fw-bold mb-1">@Model.Name</h1>
+
+                @* Stars + rating *@
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div>
+                        @for (int s = 1; s <= 5; s++)
+                        {
+                            <span class="@(s <= fullStars ? "star-filled" : "star-empty")" style="font-size:1.15rem;">&#9733;</span>
+                        }
+                    </div>
+                    @if (avgRating.HasValue)
+                    {
+                        <span class="fw-bold">@avgRating.Value.ToString("F1")</span>
+                        <span class="text-muted small">(@reviewCount review@(reviewCount == 1 ? "" : "s"))</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No reviews yet</span>
+                    }
+                </div>
+
+                <p class="text-muted mb-3">@Model.Description</p>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge @levelClass px-3 py-2">@Model.Level</span>
+                    <span class="badge @categoryClass px-3 py-2">@Model.Category</span>
+                    <span class="badge bg-secondary px-3 py-2">@(Model.WeeklyPlans.Count > 0 ? Model.WeeklyPlans.Count : Model.DurationWeeks) wks</span>
+                </div>
+
+                <div class="text-muted small mb-3">
+                    Added @Model.CreatedOn.ToString("MMMM d, yyyy")
+                </div>
+
+                @if (TempData["Success"] is string successMsg)
+                {
+                    <div class="alert alert-success">@successMsg</div>
+                }
+                @if (TempData["Info"] is string infoMsg)
+                {
+                    <div class="alert alert-info">@infoMsg</div>
+                }
+
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    if (ViewBag.IsEnrolled == true)
+                    {
+                        <div class="alert alert-success py-2 mb-2">&#10003; You are enrolled in this program</div>
+                        <form asp-controller="UserPrograms" asp-action="Unenroll" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="workoutProgramId" value="@Model.Id" />
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    onclick="return confirm('Unenroll from this program?')">Unenroll</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-controller="UserPrograms" asp-action="Enroll" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="workoutProgramId" value="@Model.Id" />
+                            <button type="submit" class="btn btn-success w-100 fw-semibold">&#10003; Enroll in This Program</button>
+                        </form>
+                    }
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login"
+                       asp-route-returnUrl="@Context.Request.Path"
+                       class="btn btn-outline-success w-100">Log in to Enroll</a>
+                }
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">&larr; Back to Programs</a>
+        </div>
+    </div>
+
+    @* ── Right: stat cards ───────────────────────────────────────────────────── *@
+    <div class="col-md-7">
+        <div class="row g-3 mb-4">
+            <div class="col-6">
+                <div class="stat-card" style="border-left-color:#0d6efd;">
+                    <div class="stat-value" style="color:#0d6efd;">@enrolledCount</div>
+                    <div class="stat-label">Enrolled Users</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card" style="border-left-color:#198754;">
+                    <div class="stat-value" style="color:#198754;">@totalExercises</div>
+                    <div class="stat-label">Total Exercises</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card" style="border-left-color:#6f42c1;">
+                    <div class="stat-value" style="color:#6f42c1;">@weeks.Count</div>
+                    <div class="stat-label">Weeks Planned</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-card" style="border-left-color:#c9a227;">
+                    <div class="stat-value" style="color:#c9a227;">@reviewCount</div>
+                    <div class="stat-label">Reviews</div>
+                </div>
+            </div>
+        </div>
+
+        @* Exercises list (always shown for Workout Only; fallback for programs without a weekly plan) *@
+        @if (Model.ProgramExercises.Any() && (Model.IsWorkoutOnly || !weeks.Any()))
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white d-flex align-items-center gap-2">
+                    <h6 class="mb-0 fw-semibold">Exercises <span class="badge bg-secondary ms-1">@Model.ProgramExercises.Count</span></h6>
+                    @if (Model.IsWorkoutOnly)
+                    {
+                        <span class="badge bg-warning text-dark ms-auto">Workout Only</span>
+                    }
+                </div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var pe in Model.ProgramExercises)
+                    {
+                        var ul = pe.Exercise.RepUnit switch { RepUnit.Seconds => "sec", RepUnit.Minutes => "min", _ => "reps" };
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <span class="fw-semibold small">@pe.Exercise.Name</span>
+                                <span class="badge bg-secondary ms-2">@pe.Exercise.MuscleGroup</span>
+                            </div>
+                            <span class="badge bg-primary">@pe.Exercise.Sets × @pe.Exercise.Reps @ul</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+</div>
+
+@* ══════════════════════════════════════════════════════════════════════════════
+   WEEKLY PLAN — full width (hidden for Workout Only programs)
+   ══════════════════════════════════════════════════════════════════════════════ *@
+@if (!Model.IsWorkoutOnly)
+{
+<h2 class="h4 fw-bold mb-1">
+    Weekly Plan
+    @if (weeks.Any())
+    {
+        <span class="badge bg-secondary ms-2 fs-6">@weeks.Count week@(weeks.Count == 1 ? "" : "s")</span>
+    }
+</h2>
+<p class="text-muted small mb-4">Full breakdown of every training day</p>
+
+@if (!weeks.Any())
+{
+    <div class="empty-plan">
+        <span class="empty-icon">&#128197;</span>
+        <div class="h5 fw-semibold mb-1">Weekly plan coming soon</div>
+        <p class="mb-0">Check back later — the training schedule will appear here.</p>
+    </div>
+}
+else
+{
+    int wi = 0;
+    @foreach (var week in weeks)
+    {
+        var color      = weekColors[wi % weekColors.Length];
+        var collapseId = $"wk-{week.Id}";
+        var tabPrefix  = $"t{week.Id}";
+        wi++;
+        var orderedDays = week.Days.OrderBy(d => d.DayNumber).ToList();
+
+        <div class="week-item">
+            @* Week accordion header *@
+            <button class="week-accordion-btn @(wi > 1 ? "collapsed" : "")"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#@collapseId"
+                    aria-expanded="@(wi == 1 ? "true" : "false")">
+                <span class="week-accent" style="background:@color;"></span>
+                <span class="fw-bold" style="color:@color;">Week @week.WeekNumber</span>
+                <span class="fw-semibold text-dark">@week.Title</span>
+                <span class="ms-auto badge rounded-pill text-white" style="background:@color;">
+                    @orderedDays.Count day@(orderedDays.Count == 1 ? "" : "s")
+                </span>
+                <span class="text-muted ms-2" style="font-size:.85rem; transition:transform .25s"
+                      data-bs-chevron>&#8964;</span>
+            </button>
+
+            @* Week body *@
+            <div id="@collapseId" class="collapse @(wi == 1 ? "show" : "")">
+                <div class="p-3 p-md-4">
+                    @if (!string.IsNullOrWhiteSpace(week.Description))
+                    {
+                        <p class="text-muted mb-3">@week.Description</p>
+                    }
+
+                    @if (!orderedDays.Any())
+                    {
+                        <p class="text-muted small fst-italic">No days scheduled for this week yet.</p>
+                    }
+                    else
+                    {
+                        @* Day pills nav *@
+                        int di = 0;
+                        <ul class="nav day-pills gap-2 mb-3 flex-nowrap overflow-auto pb-1" id="@(tabPrefix)-tabs" role="tablist">
+                            @foreach (var day in orderedDays)
+                            {
+                                var tabId  = $"{tabPrefix}-tab-{day.Id}";
+                                var paneId = $"{tabPrefix}-pane-{day.Id}";
+                                <li class="nav-item flex-shrink-0" role="presentation">
+                                    <button class="nav-link @(di == 0 ? "active text-white" : "")"
+                                            id="@tabId" data-bs-toggle="tab"
+                                            data-bs-target="#@paneId"
+                                            type="button" role="tab"
+                                            style="@(di == 0 ? $"background:{color};" : "")">
+                                        @day.DayName
+                                    </button>
+                                </li>
+                                di++;
+                            }
+                        </ul>
+
+                        @* Day tab panes *@
+                        int dj = 0;
+                        <div class="tab-content" id="@(tabPrefix)-content">
+                            @foreach (var day in orderedDays)
+                            {
+                                var paneId = $"{tabPrefix}-pane-{day.Id}";
+                                var focusBg = color + "22"; // 13% opacity hex
+                                <div class="tab-pane fade @(dj == 0 ? "show active" : "")"
+                                     id="@paneId" role="tabpanel">
+
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <span class="focus-pill" style="background:@focusBg;color:@color;">@day.Focus</span>
+                                        @if (!string.IsNullOrWhiteSpace(day.Notes))
+                                        {
+                                            <span class="text-muted small fst-italic">@day.Notes</span>
+                                        }
+                                    </div>
+
+                                    @if (!day.Exercises.Any())
+                                    {
+                                        <p class="text-muted small fst-italic mb-0">Rest day — no exercises scheduled.</p>
+                                    }
+                                    else
+                                    {
+                                        <table class="table ex-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Exercise</th>
+                                                    <th class="text-center" style="width:60px">Sets</th>
+                                                    <th class="text-center" style="width:60px">Reps</th>
+                                                    <th class="text-center" style="width:60px">Unit</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ex in day.Exercises.OrderBy(e => e.OrderIndex))
+                                                {
+                                                    var ul = ex.RepUnit switch
+                                                    {
+                                                        RepUnit.Seconds => "sec",
+                                                        RepUnit.Minutes => "min",
+                                                        _               => "reps"
+                                                    };
+                                                    <tr>
+                                                        <td>
+                                                            <span class="fw-semibold">@ex.ExerciseName</span>
+                                                            @if (!string.IsNullOrWhiteSpace(ex.Notes))
+                                                            {
+                                                                <div class="text-muted fst-italic" style="font-size:.78rem;">@ex.Notes</div>
+                                                            }
+                                                        </td>
+                                                        <td class="text-center fw-semibold">@ex.Sets</td>
+                                                        <td class="text-center fw-semibold">@ex.Reps</td>
+                                                        <td class="text-center">
+                                                            <span class="badge rounded-pill text-white px-2" style="background:@color;">@ul</span>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    }
+                                </div>
+                                dj++;
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+} @* end @if (!Model.IsWorkoutOnly) *@
+
+@* ══════════════════════════════════════════════════════════════════════════════
+   REVIEWS — full width
+   ══════════════════════════════════════════════════════════════════════════════ *@
+<hr class="my-5" />
+<div class="row">
+    <div class="col-lg-8">
+
+        <h2 class="h4 mb-4">
+            Reviews
+            @if (reviewCount > 0)
+            {
+                <span class="badge bg-secondary ms-1">@reviewCount</span>
+            }
+        </h2>
+
+        @if (TempData["ReviewError"] is string revErr)
+        {
+            <div class="alert alert-danger alert-dismissible fade show">
+                @revErr <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        @if (!Model.ProgramReviews.Any())
+        {
+            <p class="text-muted mb-4">No reviews yet. Be the first!</p>
+        }
+        else
+        {
+            @foreach (var review in Model.ProgramReviews.OrderByDescending(r => r.CreatedOn))
+            {
+                var initial = review.User?.UserName?[0].ToString().ToUpper() ?? "?";
+                var isOwn   = User.Identity?.Name == review.User?.UserName;
+                var isAdmin = User.IsInRole("Admin");
+
+                <div class="review-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="d-flex gap-2 align-items-start">
+                            <div class="review-avatar">@initial</div>
+                            <div>
+                                <div class="fw-semibold small">@review.User?.UserName</div>
+                                <div class="text-muted" style="font-size:.75rem">
+                                    @review.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <div>
+                                @for (int s = 1; s <= 5; s++)
+                                {
+                                    <span class="@(s <= review.Rating ? "star-filled" : "star-empty")">&#9733;</span>
+                                }
+                            </div>
+                            @if (isOwn || isAdmin)
+                            {
+                                <form asp-action="DeleteReview" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="reviewId"         value="@review.Id" />
+                                    <input type="hidden" name="workoutProgramId" value="@Model.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this review?')">✕</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0 small">@review.Comment</p>
+                </div>
+            }
+        }
+
+        @* Add review form *@
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            if (!userHasReviewed)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-dark text-white">
+                        <h6 class="mb-0 fw-semibold">Leave a Review</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <form asp-action="AddReview" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="workoutProgramId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold d-block">Your Rating</label>
+                                <div class="star-selector" id="starSelector">
+                                    @for (int s = 5; s >= 1; s--)
+                                    {
+                                        <input type="radio" name="rating" id="star@s" value="@s" />
+                                        <label for="star@s" title="@s star@(s > 1 ? "s" : "")">&#9733;</label>
+                                    }
+                                </div>
+                                <div class="text-muted small mt-1" id="ratingHint">Click a star to rate</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Comment</label>
+                                <textarea name="comment" class="form-control" rows="3"
+                                          placeholder="Share your experience with this program…"
+                                          maxlength="500" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-dark px-4">Post Review</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mt-4">&#10003; You have already reviewed this program.</div>
+            }
+        }
+        else
+        {
+            <div class="card border-0 bg-light text-center p-4 mt-4">
+                <p class="mb-2 text-muted">Want to share your experience?</p>
+                <a asp-controller="Account" asp-action="Login"
+                   asp-route-returnUrl="@Context.Request.Path"
+                   class="btn btn-outline-dark">Log in to leave a review</a>
+            </div>
+        }
+
+    </div>
+</div>
+
+</div> @* /container *@
+
+@section Scripts {
+<script>
+(function () {
+    // ── Rotate chevron on accordion toggle ──────────────────────────────────
+    document.querySelectorAll('[data-bs-chevron]').forEach(chevron => {
+        const btn = chevron.closest('[data-bs-toggle="collapse"]');
+        const target = document.querySelector(btn.dataset.bsTarget);
+        if (!target) return;
+        target.addEventListener('show.bs.collapse',  () => chevron.style.transform = 'rotate(180deg)');
+        target.addEventListener('hide.bs.collapse',  () => chevron.style.transform = '');
+    });
+
+    // ── Active day pill color ────────────────────────────────────────────────
+    document.querySelectorAll('.day-pills').forEach(nav => {
+        nav.querySelectorAll('[data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('show.bs.tab', function () {
+                // Find the accent colour from the nearest week-item
+                const weekBtn = this.closest('.week-item')?.querySelector('.week-accordion-btn');
+                const accent  = weekBtn?.querySelector('.week-accent')?.style.background ?? '#0d6efd';
+                this.style.background   = accent;
+                this.style.borderColor  = 'transparent';
+                this.style.color        = '#fff';
+            });
+            btn.addEventListener('hide.bs.tab', function () {
+                this.style.background  = '';
+                this.style.borderColor = '';
+                this.style.color       = '';
+            });
+        });
+    });
+
+    // ── Review star hint ─────────────────────────────────────────────────────
+    document.querySelectorAll('.star-selector input').forEach(input => {
+        input.addEventListener('change', () => {
+            const labels = ['','1 star – Poor','2 stars – Fair','3 stars – Good','4 stars – Great','5 stars – Excellent'];
+            document.getElementById('ratingHint').textContent = labels[input.value] || '';
+        });
+    });
+})();
+</script>
+}

@@ -1,0 +1,83 @@
+@model FitTrack.Models.ExerciseCreateViewModel
+
+@{
+    ViewData["Title"] = "Admin — Add Exercise";
+}
+
+<div class="container mt-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+                    <li class="breadcrumb-item">
+                        <a asp-action="Edit" asp-route-id="@Model.WorkoutProgramId">@ViewBag.ProgramName</a>
+                    </li>
+                    <li class="breadcrumb-item active">Add Exercise</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Add Exercise to "@ViewBag.ProgramName"</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="ExerciseCreate" method="post">
+                        <input type="hidden" asp-for="WorkoutProgramId" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label fw-semibold"></label>
+                            <input asp-for="Name" class="form-control" placeholder="e.g. Barbell Back Squat" />
+                            <span asp-validation-for="Name" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-semibold"></label>
+                            <textarea asp-for="Description" class="form-control" rows="3"
+                                      placeholder="Describe proper form and technique..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="MuscleGroup" class="form-label fw-semibold"></label>
+                            <input asp-for="MuscleGroup" class="form-control" placeholder="e.g. Quadriceps" />
+                            <span asp-validation-for="MuscleGroup" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label asp-for="Sets" class="form-label fw-semibold"></label>
+                                <input asp-for="Sets" type="number" class="form-control" min="1" max="20" />
+                                <span asp-validation-for="Sets" class="text-danger small"></span>
+                            </div>
+                            <div class="col-sm-6">
+                                <label asp-for="Reps" class="form-label fw-semibold"></label>
+                                <input asp-for="Reps" type="number" class="form-control" min="1" max="100" />
+                                <span asp-validation-for="Reps" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ImageUrl" class="form-label fw-semibold">Image URL <span class="text-muted fw-normal">(optional)</span></label>
+                            <input asp-for="ImageUrl" class="form-control" placeholder="https://..." />
+                            <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success px-4">Add Exercise</button>
+                            <a asp-action="Edit" asp-route-id="@Model.WorkoutProgramId"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

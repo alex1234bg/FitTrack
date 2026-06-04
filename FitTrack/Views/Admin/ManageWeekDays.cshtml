@@ -1,0 +1,717 @@
+@model FitTrack.Models.WeeklyPlan
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = $"Admin — Week {Model.WeekNumber}: {Model.Title}";
+    var days = Model.Days.OrderBy(d => d.DayNumber).ToList();
+}
+
+<style>
+    .day-card { transition: opacity 0.3s; }
+    .ex-row   { transition: opacity 0.3s; }
+</style>
+
+<div class="container mt-3">
+
+    <div id="page-flash" class="d-none mb-3" role="alert"></div>
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+            <li class="breadcrumb-item">
+                <a asp-action="ManageWeeklyPlans" asp-route-id="@Model.WorkoutProgramId">@Model.WorkoutProgram.Name</a>
+            </li>
+            <li class="breadcrumb-item active">Week @Model.WeekNumber – @Model.Title</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Week @Model.WeekNumber – @Model.Title</h1>
+            <small class="text-muted" id="day-count-label">@days.Count day(s)</small>
+        </div>
+        <a asp-action="ManageWeeklyPlans" asp-route-id="@Model.WorkoutProgramId"
+           class="btn btn-outline-secondary btn-sm">&larr; Back to Weekly Plans</a>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    @* ── Day cards ──────────────────────────────────────────────────────────── *@
+    <div id="days-container">
+        @foreach (var day in days)
+        {
+            <div class="card shadow-sm mb-3 day-card" id="day-card-@day.Id" data-day-id="@day.Id">
+                @* ── Day header ── *@
+                <div class="card-header bg-dark text-white" id="day-header-@day.Id">
+                    <div class="d-flex justify-content-between align-items-center day-view-mode">
+                        <div>
+                            <span class="fw-bold me-2">Day @day.DayNumber – @day.DayName</span>
+                            <span class="badge bg-secondary">@day.Focus</span>
+                            @if (!string.IsNullOrWhiteSpace(day.Notes))
+                            {
+                                <span class="ms-2 text-white-50 small fst-italic">@day.Notes</span>
+                            }
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-light btn-edit-day"
+                                    data-day-id="@day.Id" data-day-number="@day.DayNumber"
+                                    data-day-name="@day.DayName" data-focus="@day.Focus"
+                                    data-notes="@(day.Notes ?? "")">Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-day"
+                                    data-day-id="@day.Id" data-day-name="@day.DayName">Delete</button>
+                        </div>
+                    </div>
+                    <div class="day-edit-mode d-none">
+                        <div class="row g-2 align-items-end py-1">
+                            <div class="col-auto">
+                                <label class="form-label text-white-50 small mb-1">Day #</label>
+                                <select class="form-select form-select-sm day-edit-number" style="width:70px">
+                                    @for (int d = 1; d <= 7; d++) { <option value="@d">@d</option> }
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label text-white-50 small mb-1">Name</label>
+                                <select class="form-select form-select-sm day-edit-name" style="width:130px">
+                                    @foreach (var n in new[]{"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"})
+                                    { <option value="@n">@n</option> }
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label text-white-50 small mb-1">Focus</label>
+                                <input class="form-control form-control-sm day-edit-focus" maxlength="100" />
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="form-label text-white-50 small mb-1">Notes (optional)</label>
+                                <input class="form-control form-control-sm day-edit-notes" maxlength="500" />
+                            </div>
+                            <div class="col-auto d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-success btn-save-day"
+                                        data-day-id="@day.Id">Save</button>
+                                <button type="button" class="btn btn-sm btn-outline-light btn-cancel-day"
+                                        data-day-id="@day.Id">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div id="day-flash-@day.Id" class="d-none mb-2 alert" role="alert"></div>
+
+                    @* Exercise table *@
+                    <table class="table table-sm table-hover align-middle mb-2"
+                           id="ex-table-@day.Id" @(!day.Exercises.Any() ? "style=display:none" : "")>
+                        <thead class="table-light">
+                            <tr><th>#</th><th>Exercise</th><th class="text-center">Sets × Reps</th><th>Notes</th><th></th></tr>
+                        </thead>
+                        <tbody id="ex-tbody-@day.Id">
+                            @foreach (var ex in day.Exercises.OrderBy(e => e.OrderIndex))
+                            {
+                                var ul = ex.RepUnit switch { RepUnit.Seconds => "sec", RepUnit.Minutes => "min", _ => "reps" };
+                                <tr class="ex-row" id="ex-row-@ex.Id">
+                                    <td class="text-muted small">@ex.OrderIndex</td>
+                                    <td class="fw-semibold ex-view-name">@ex.ExerciseName</td>
+                                    <td class="text-center ex-view-badge">
+                                        <span class="badge bg-primary">@ex.Sets × @ex.Reps @ul</span>
+                                    </td>
+                                    <td class="text-muted small ex-view-notes">@ex.Notes</td>
+                                    <td class="ex-view-actions">
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-ex"
+                                                    data-id="@ex.Id" data-name="@ex.ExerciseName"
+                                                    data-sets="@ex.Sets" data-reps="@ex.Reps"
+                                                    data-unit="@((int)ex.RepUnit)" data-notes="@(ex.Notes ?? "")">Edit</button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ex"
+                                                    data-id="@ex.Id" data-name="@ex.ExerciseName">✕</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr class="ex-edit-row d-none" id="ex-edit-@ex.Id">
+                                    <td colspan="5">
+                                        <div class="row g-2 align-items-end p-1">
+                                            <div class="col-sm-4">
+                                                <input class="form-control form-control-sm ex-edit-name"
+                                                       value="@ex.ExerciseName" maxlength="200" />
+                                            </div>
+                                            <div class="col-auto">
+                                                <input type="number" class="form-control form-control-sm ex-edit-sets"
+                                                       value="@ex.Sets" min="1" max="20" style="width:65px" />
+                                            </div>
+                                            <div class="col-auto">
+                                                <input type="number" class="form-control form-control-sm ex-edit-reps"
+                                                       value="@ex.Reps" min="1" max="300" style="width:70px" />
+                                            </div>
+                                            <div class="col-auto">
+                                                <div class="btn-group btn-group-sm">
+                                                    <input type="radio" class="btn-check" name="eu_@ex.Id" id="eu_r_@ex.Id" value="0" autocomplete="off" @(ex.RepUnit == RepUnit.Reps ? "checked" : "") />
+                                                    <label class="btn btn-outline-secondary" for="eu_r_@ex.Id">Reps</label>
+                                                    <input type="radio" class="btn-check" name="eu_@ex.Id" id="eu_s_@ex.Id" value="1" autocomplete="off" @(ex.RepUnit == RepUnit.Seconds ? "checked" : "") />
+                                                    <label class="btn btn-outline-secondary" for="eu_s_@ex.Id">Sec</label>
+                                                    <input type="radio" class="btn-check" name="eu_@ex.Id" id="eu_m_@ex.Id" value="2" autocomplete="off" @(ex.RepUnit == RepUnit.Minutes ? "checked" : "") />
+                                                    <label class="btn btn-outline-secondary" for="eu_m_@ex.Id">Min</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-3">
+                                                <input class="form-control form-control-sm ex-edit-notes"
+                                                       value="@(ex.Notes ?? "")" placeholder="notes…" maxlength="500" />
+                                            </div>
+                                            <div class="col-auto d-flex gap-1">
+                                                <button type="button" class="btn btn-sm btn-success btn-save-ex"
+                                                        data-id="@ex.Id">Save</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-ex"
+                                                        data-id="@ex.Id">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="text-muted small mb-2 @(day.Exercises.Any() ? "d-none" : "")"
+                       id="ex-empty-@day.Id">No exercises added yet.</p>
+
+                    @* Add exercise inline form *@
+                    <details class="mt-2">
+                        <summary class="btn btn-sm btn-outline-success">+ Add Exercise</summary>
+                        <div class="mt-2 p-3 bg-light rounded">
+                            <div class="row g-2 align-items-end" data-day-id="@day.Id">
+                                <div class="col-sm-4">
+                                    <label class="form-label small fw-semibold">Exercise Name <span class="text-danger">*</span></label>
+                                    <input class="form-control form-control-sm ex-name-input"
+                                           placeholder="e.g. Wall Push-up, Barbell Squat…" maxlength="200" />
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small fw-semibold">Sets</label>
+                                    <input type="number" class="form-control form-control-sm ex-sets-input"
+                                           value="3" min="1" max="20" style="width:65px" />
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small fw-semibold">Reps</label>
+                                    <input type="number" class="form-control form-control-sm ex-reps-input"
+                                           value="10" min="1" max="300" style="width:70px" />
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Unit</label>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <input type="radio" class="btn-check ex-unit-radio" name="nu_@day.Id" id="nu_r_@day.Id" value="0" checked autocomplete="off" />
+                                        <label class="btn btn-outline-secondary" for="nu_r_@day.Id">Reps</label>
+                                        <input type="radio" class="btn-check ex-unit-radio" name="nu_@day.Id" id="nu_s_@day.Id" value="1" autocomplete="off" />
+                                        <label class="btn btn-outline-secondary" for="nu_s_@day.Id">Sec</label>
+                                        <input type="radio" class="btn-check ex-unit-radio" name="nu_@day.Id" id="nu_m_@day.Id" value="2" autocomplete="off" />
+                                        <label class="btn btn-outline-secondary" for="nu_m_@day.Id">Min</label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-2">
+                                    <label class="form-label small fw-semibold">Notes</label>
+                                    <input class="form-control form-control-sm ex-notes-input" placeholder="optional" maxlength="500" />
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-sm btn-success btn-add-ex">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Add Day form ────────────────────────────────────────────────────────── *@
+    <div class="card shadow-sm mt-2">
+        <div class="card-header bg-success text-white"><h5 class="mb-0">+ Add Day</h5></div>
+        <div class="card-body p-4">
+            <div id="add-day-flash" class="d-none mb-3 alert" role="alert"></div>
+            <div class="row g-3" id="add-day-form" data-week-id="@Model.Id">
+                <div class="col-sm-2">
+                    <label class="form-label fw-semibold">Day # <span class="text-danger">*</span></label>
+                    <select class="form-select add-day-number" id="add-day-number">
+                        @for (int d = 1; d <= 7; d++) { <option value="@d">@d</option> }
+                    </select>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label fw-semibold">Day Name <span class="text-danger">*</span></label>
+                    <select class="form-select add-day-name" id="add-day-name">
+                        @foreach (var n in new[]{"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"})
+                        { <option value="@n">@n</option> }
+                    </select>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label fw-semibold">Focus <span class="text-danger">*</span></label>
+                    <input class="form-control add-day-focus" id="add-day-focus"
+                           placeholder="e.g. Upper Body, Rest Day" maxlength="100" />
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                    <input class="form-control add-day-notes" id="add-day-notes"
+                           placeholder="Any notes…" maxlength="500" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-success px-4" id="btn-add-day">Add Day</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const aft = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function unitLabel(u) { return u === 1 ? 'sec' : u === 2 ? 'min' : 'reps'; }
+
+    function esc(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function escAttr(s) { return String(s ?? '').replace(/"/g,'&quot;'); }
+
+    function flash(elId, msg, isErr) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.className = 'alert mb-2 ' + (isErr ? 'alert-danger' : 'alert-success');
+        el.textContent = msg;
+        el.classList.remove('d-none');
+        if (!isErr) setTimeout(() => el.classList.add('d-none'), 2000);
+    }
+
+    async function post(url, params) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': aft, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(params).toString()
+        });
+        return res.json();
+    }
+
+    function setBusy(btn, busy) {
+        btn.disabled = busy;
+        if (busy) { btn.dataset.orig = btn.textContent; btn.textContent = 'Saving…'; }
+        else       { btn.textContent = btn.dataset.orig || btn.textContent; }
+    }
+
+    function fadeRemove(el, cb) {
+        el.style.opacity = '0';
+        setTimeout(() => { el.remove(); if (cb) cb(); }, 300);
+    }
+
+    function updateDayCount() {
+        const n = document.querySelectorAll('.day-card').length;
+        const lbl = document.getElementById('day-count-label');
+        if (lbl) lbl.textContent = n + ' day(s)';
+    }
+
+    // ── Build new day card HTML ────────────────────────────────────────────────
+    function buildDayCard(d) {
+        return `
+<div class="card shadow-sm mb-3 day-card" id="day-card-${d.id}" data-day-id="${d.id}" style="opacity:0;transition:opacity 0.3s">
+  <div class="card-header bg-dark text-white" id="day-header-${d.id}">
+    <div class="d-flex justify-content-between align-items-center day-view-mode">
+      <div>
+        <span class="fw-bold me-2">Day ${d.dayNumber} – ${esc(d.dayName)}</span>
+        <span class="badge bg-secondary">${esc(d.focus)}</span>
+        ${d.notes ? `<span class="ms-2 text-white-50 small fst-italic">${esc(d.notes)}</span>` : ''}
+      </div>
+      <div class="d-flex gap-1">
+        <button type="button" class="btn btn-sm btn-outline-light btn-edit-day"
+                data-day-id="${d.id}" data-day-number="${d.dayNumber}"
+                data-day-name="${escAttr(d.dayName)}" data-focus="${escAttr(d.focus)}"
+                data-notes="${escAttr(d.notes ?? '')}">Edit</button>
+        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-day"
+                data-day-id="${d.id}" data-day-name="${escAttr(d.dayName)}">Delete</button>
+      </div>
+    </div>
+    <div class="day-edit-mode d-none">
+      <div class="row g-2 align-items-end py-1">
+        <div class="col-auto">
+          <label class="form-label text-white-50 small mb-1">Day #</label>
+          <select class="form-select form-select-sm day-edit-number" style="width:70px">
+            ${[1,2,3,4,5,6,7].map(n=>`<option value="${n}"${n===d.dayNumber?' selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label text-white-50 small mb-1">Name</label>
+          <select class="form-select form-select-sm day-edit-name" style="width:130px">
+            ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(n=>`<option value="${n}"${n===d.dayName?' selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label text-white-50 small mb-1">Focus</label>
+          <input class="form-control form-control-sm day-edit-focus" value="${escAttr(d.focus)}" maxlength="100" />
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label text-white-50 small mb-1">Notes (optional)</label>
+          <input class="form-control form-control-sm day-edit-notes" value="${escAttr(d.notes ?? '')}" maxlength="500" />
+        </div>
+        <div class="col-auto d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-success btn-save-day" data-day-id="${d.id}">Save</button>
+          <button type="button" class="btn btn-sm btn-outline-light btn-cancel-day" data-day-id="${d.id}">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="day-flash-${d.id}" class="d-none mb-2 alert" role="alert"></div>
+    <table class="table table-sm table-hover align-middle mb-2" id="ex-table-${d.id}" style="display:none">
+      <thead class="table-light">
+        <tr><th>#</th><th>Exercise</th><th class="text-center">Sets × Reps</th><th>Notes</th><th></th></tr>
+      </thead>
+      <tbody id="ex-tbody-${d.id}"></tbody>
+    </table>
+    <p class="text-muted small mb-2" id="ex-empty-${d.id}">No exercises added yet.</p>
+    <details class="mt-2">
+      <summary class="btn btn-sm btn-outline-success">+ Add Exercise</summary>
+      <div class="mt-2 p-3 bg-light rounded">
+        <div class="row g-2 align-items-end" data-day-id="${d.id}">
+          <div class="col-sm-4">
+            <label class="form-label small fw-semibold">Exercise Name <span class="text-danger">*</span></label>
+            <input class="form-control form-control-sm ex-name-input" placeholder="e.g. Wall Push-up…" maxlength="200" />
+          </div>
+          <div class="col-auto">
+            <label class="form-label small fw-semibold">Sets</label>
+            <input type="number" class="form-control form-control-sm ex-sets-input" value="3" min="1" max="20" style="width:65px" />
+          </div>
+          <div class="col-auto">
+            <label class="form-label small fw-semibold">Reps</label>
+            <input type="number" class="form-control form-control-sm ex-reps-input" value="10" min="1" max="300" style="width:70px" />
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small fw-semibold">Unit</label>
+            <div class="btn-group btn-group-sm w-100">
+              <input type="radio" class="btn-check ex-unit-radio" name="nu_${d.id}" id="nu_r_${d.id}" value="0" checked autocomplete="off" />
+              <label class="btn btn-outline-secondary" for="nu_r_${d.id}">Reps</label>
+              <input type="radio" class="btn-check ex-unit-radio" name="nu_${d.id}" id="nu_s_${d.id}" value="1" autocomplete="off" />
+              <label class="btn btn-outline-secondary" for="nu_s_${d.id}">Sec</label>
+              <input type="radio" class="btn-check ex-unit-radio" name="nu_${d.id}" id="nu_m_${d.id}" value="2" autocomplete="off" />
+              <label class="btn btn-outline-secondary" for="nu_m_${d.id}">Min</label>
+            </div>
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label small fw-semibold">Notes</label>
+            <input class="form-control form-control-sm ex-notes-input" placeholder="optional" maxlength="500" />
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-sm btn-success btn-add-ex">Add</button>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>`;
+    }
+
+    // ── Build exercise row HTML ────────────────────────────────────────────────
+    function buildExRow(ex) {
+        const ul = unitLabel(ex.repUnit);
+        return `
+<tr class="ex-row" id="ex-row-${ex.id}">
+  <td class="text-muted small">${ex.order}</td>
+  <td class="fw-semibold ex-view-name">${esc(ex.name)}</td>
+  <td class="text-center ex-view-badge"><span class="badge bg-primary">${ex.sets} × ${ex.reps} ${ul}</span></td>
+  <td class="text-muted small ex-view-notes">${esc(ex.notes ?? '')}</td>
+  <td class="ex-view-actions">
+    <div class="d-flex gap-1">
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-ex"
+              data-id="${ex.id}" data-name="${escAttr(ex.name)}"
+              data-sets="${ex.sets}" data-reps="${ex.reps}"
+              data-unit="${ex.repUnit}" data-notes="${escAttr(ex.notes ?? '')}">Edit</button>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ex"
+              data-id="${ex.id}" data-name="${escAttr(ex.name)}">✕</button>
+    </div>
+  </td>
+</tr>
+<tr class="ex-edit-row d-none" id="ex-edit-${ex.id}">
+  <td colspan="5">
+    <div class="row g-2 align-items-end p-1">
+      <div class="col-sm-4">
+        <input class="form-control form-control-sm ex-edit-name" value="${escAttr(ex.name)}" maxlength="200" />
+      </div>
+      <div class="col-auto">
+        <input type="number" class="form-control form-control-sm ex-edit-sets" value="${ex.sets}" min="1" max="20" style="width:65px" />
+      </div>
+      <div class="col-auto">
+        <input type="number" class="form-control form-control-sm ex-edit-reps" value="${ex.reps}" min="1" max="300" style="width:70px" />
+      </div>
+      <div class="col-auto">
+        <div class="btn-group btn-group-sm">
+          <input type="radio" class="btn-check" name="eu_${ex.id}" id="eu_r_${ex.id}" value="0" autocomplete="off" ${ex.repUnit===0?'checked':''} />
+          <label class="btn btn-outline-secondary" for="eu_r_${ex.id}">Reps</label>
+          <input type="radio" class="btn-check" name="eu_${ex.id}" id="eu_s_${ex.id}" value="1" autocomplete="off" ${ex.repUnit===1?'checked':''} />
+          <label class="btn btn-outline-secondary" for="eu_s_${ex.id}">Sec</label>
+          <input type="radio" class="btn-check" name="eu_${ex.id}" id="eu_m_${ex.id}" value="2" autocomplete="off" ${ex.repUnit===2?'checked':''} />
+          <label class="btn btn-outline-secondary" for="eu_m_${ex.id}">Min</label>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <input class="form-control form-control-sm ex-edit-notes" value="${escAttr(ex.notes ?? '')}" placeholder="notes…" maxlength="500" />
+      </div>
+      <div class="col-auto d-flex gap-1">
+        <button type="button" class="btn btn-sm btn-success btn-save-ex" data-id="${ex.id}">Save</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-ex" data-id="${ex.id}">Cancel</button>
+      </div>
+    </div>
+  </td>
+</tr>`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ADD DAY
+    // ═══════════════════════════════════════════════════════════════════════════
+    document.getElementById('btn-add-day').addEventListener('click', async function () {
+        const weekId    = document.getElementById('add-day-form').dataset.weekId;
+        const dayNumber = document.getElementById('add-day-number').value;
+        const dayName   = document.getElementById('add-day-name').value;
+        const focus     = document.getElementById('add-day-focus').value.trim();
+        const notes     = document.getElementById('add-day-notes').value.trim();
+
+        if (!focus) { flash('add-day-flash', 'Focus is required.', true); return; }
+
+        setBusy(this, true);
+        try {
+            const data = await post('/Admin/CreateDay', { weeklyPlanId: weekId, dayNumber, dayName, focus, notes });
+            if (!data.success) { flash('add-day-flash', data.message || 'Error adding day.', true); return; }
+
+            // Append new card
+            const container = document.getElementById('days-container');
+            container.insertAdjacentHTML('beforeend', buildDayCard(data));
+            const newCard = document.getElementById('day-card-' + data.id);
+            requestAnimationFrame(() => newCard.style.opacity = '1');
+
+            // Reset form
+            document.getElementById('add-day-focus').value = '';
+            document.getElementById('add-day-notes').value = '';
+
+            flash('add-day-flash', 'Day added!', false);
+            updateDayCount();
+        } catch { flash('add-day-flash', 'Network error. Please try again.', true); }
+        finally  { setBusy(this, false); }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DELETE DAY / EDIT DAY (delegated)
+    // ═══════════════════════════════════════════════════════════════════════════
+    document.addEventListener('click', async function (e) {
+
+        // ── Delete day ──────────────────────────────────────────────────────
+        const delDayBtn = e.target.closest('.btn-delete-day');
+        if (delDayBtn) {
+            const dayId   = delDayBtn.dataset.dayId;
+            const dayName = delDayBtn.dataset.dayName;
+            if (!confirm(`Delete Day "${dayName}" and all its exercises?`)) return;
+
+            setBusy(delDayBtn, true);
+            try {
+                const data = await post('/Admin/DeleteDay', { id: dayId });
+                if (!data.success) { alert(data.message || 'Could not delete day.'); setBusy(delDayBtn, false); return; }
+                fadeRemove(document.getElementById('day-card-' + dayId), updateDayCount);
+            } catch { alert('Network error.'); setBusy(delDayBtn, false); }
+            return;
+        }
+
+        // ── Enter day edit mode ─────────────────────────────────────────────
+        const editDayBtn = e.target.closest('.btn-edit-day');
+        if (editDayBtn) {
+            const dayId  = editDayBtn.dataset.dayId;
+            const header = document.getElementById('day-header-' + dayId);
+            const view   = header.querySelector('.day-view-mode');
+            const edit   = header.querySelector('.day-edit-mode');
+
+            // Populate edit fields from data attributes
+            edit.querySelector('.day-edit-number').value = editDayBtn.dataset.dayNumber;
+            edit.querySelector('.day-edit-name').value   = editDayBtn.dataset.dayName;
+            edit.querySelector('.day-edit-focus').value  = editDayBtn.dataset.focus;
+            edit.querySelector('.day-edit-notes').value  = editDayBtn.dataset.notes;
+
+            view.classList.add('d-none');
+            edit.classList.remove('d-none');
+            return;
+        }
+
+        // ── Cancel day edit ─────────────────────────────────────────────────
+        const cancelDayBtn = e.target.closest('.btn-cancel-day');
+        if (cancelDayBtn) {
+            const dayId  = cancelDayBtn.dataset.dayId;
+            const header = document.getElementById('day-header-' + dayId);
+            header.querySelector('.day-view-mode').classList.remove('d-none');
+            header.querySelector('.day-edit-mode').classList.add('d-none');
+            return;
+        }
+
+        // ── Save day edit ────────────────────────────────────────────────────
+        const saveDayBtn = e.target.closest('.btn-save-day');
+        if (saveDayBtn) {
+            const dayId  = saveDayBtn.dataset.dayId;
+            const header = document.getElementById('day-header-' + dayId);
+            const edit   = header.querySelector('.day-edit-mode');
+            const number = edit.querySelector('.day-edit-number').value;
+            const name   = edit.querySelector('.day-edit-name').value;
+            const focus  = edit.querySelector('.day-edit-focus').value.trim();
+            const notes  = edit.querySelector('.day-edit-notes').value.trim();
+
+            if (!focus) { flash('day-flash-' + dayId, 'Focus is required.', true); return; }
+
+            setBusy(saveDayBtn, true);
+            try {
+                const data = await post('/Admin/EditDay', { id: dayId, dayNumber: number, dayName: name, focus, notes });
+                if (!data.success) { flash('day-flash-' + dayId, data.message || 'Error saving.', true); setBusy(saveDayBtn, false); return; }
+
+                // Update view mode HTML
+                const view    = header.querySelector('.day-view-mode');
+                const editBtn = view.querySelector('.btn-edit-day');
+                editBtn.dataset.dayNumber = data.dayNumber;
+                editBtn.dataset.dayName   = data.dayName;
+                editBtn.dataset.focus     = data.focus;
+                editBtn.dataset.notes     = data.notes ?? '';
+
+                const delBtn = view.querySelector('.btn-delete-day');
+                delBtn.dataset.dayName = data.dayName;
+
+                const inner = view.querySelector('div:first-child');
+                inner.innerHTML =
+                    `<span class="fw-bold me-2">Day ${data.dayNumber} – ${esc(data.dayName)}</span>` +
+                    `<span class="badge bg-secondary">${esc(data.focus)}</span>` +
+                    (data.notes ? `<span class="ms-2 text-white-50 small fst-italic">${esc(data.notes)}</span>` : '');
+
+                view.classList.remove('d-none');
+                edit.classList.add('d-none');
+                flash('day-flash-' + dayId, 'Day updated!', false);
+            } catch { flash('day-flash-' + dayId, 'Network error.', true); }
+            finally  { setBusy(saveDayBtn, false); }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // EXERCISE: Add
+        // ═══════════════════════════════════════════════════════════════════════
+        const addExBtn = e.target.closest('.btn-add-ex');
+        if (addExBtn) {
+            const form   = addExBtn.closest('[data-day-id]');
+            const dayId  = form.dataset.dayId;
+            const nameEl = form.querySelector('.ex-name-input');
+            const name   = nameEl.value.trim();
+
+            if (!name) { flash('day-flash-' + dayId, 'Exercise name is required.', true); nameEl.focus(); return; }
+
+            const sets    = form.querySelector('.ex-sets-input').value;
+            const reps    = form.querySelector('.ex-reps-input').value;
+            const repUnit = form.querySelector('.ex-unit-radio:checked').value;
+            const notes   = form.querySelector('.ex-notes-input').value.trim();
+
+            setBusy(addExBtn, true);
+            try {
+                const data = await post('/Admin/AddDayExercise', { dayId, exerciseName: name, sets, reps, repUnit, notes });
+                if (!data.success) { flash('day-flash-' + dayId, data.message || 'Error.', true); return; }
+
+                const tbody = document.getElementById('ex-tbody-' + dayId);
+                tbody.insertAdjacentHTML('beforeend', buildExRow(data));
+
+                document.getElementById('ex-table-' + dayId).style.display = '';
+                document.getElementById('ex-empty-' + dayId).classList.add('d-none');
+
+                nameEl.value = '';
+                form.querySelector('.ex-sets-input').value = '3';
+                form.querySelector('.ex-reps-input').value = '10';
+                form.querySelector('.ex-notes-input').value = '';
+                form.querySelectorAll('.ex-unit-radio').forEach(r => r.checked = r.value === '0');
+
+                flash('day-flash-' + dayId, 'Exercise added!', false);
+            } catch { flash('day-flash-' + dayId, 'Network error.', true); }
+            finally  { setBusy(addExBtn, false); }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // EXERCISE: Remove
+        // ═══════════════════════════════════════════════════════════════════════
+        const removeExBtn = e.target.closest('.btn-remove-ex');
+        if (removeExBtn) {
+            const exId = removeExBtn.dataset.id;
+            const name = removeExBtn.dataset.name;
+            if (!confirm(`Remove "${name}" from this day?`)) return;
+
+            setBusy(removeExBtn, true);
+            try {
+                const data = await post('/Admin/RemoveDayExercise', { id: exId });
+                if (!data.success) { alert(data.message || 'Could not remove.'); setBusy(removeExBtn, false); return; }
+
+                const viewRow = document.getElementById('ex-row-' + exId);
+                const editRow = document.getElementById('ex-edit-' + exId);
+                const tbody   = viewRow?.closest('tbody');
+                const table   = viewRow?.closest('table');
+
+                viewRow?.remove();
+                editRow?.remove();
+
+                if (tbody && !tbody.querySelector('tr.ex-row')) {
+                    if (table) table.style.display = 'none';
+                    const dayId = table?.id?.replace('ex-table-', '');
+                    if (dayId) document.getElementById('ex-empty-' + dayId)?.classList.remove('d-none');
+                }
+            } catch { alert('Network error.'); setBusy(removeExBtn, false); }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // EXERCISE: Enter edit mode
+        // ═══════════════════════════════════════════════════════════════════════
+        const editExBtn = e.target.closest('.btn-edit-ex');
+        if (editExBtn) {
+            const exId = editExBtn.dataset.id;
+            document.getElementById('ex-row-' + exId).classList.add('d-none');
+            document.getElementById('ex-edit-' + exId).classList.remove('d-none');
+            return;
+        }
+
+        // ── Cancel exercise edit ────────────────────────────────────────────
+        const cancelExBtn = e.target.closest('.btn-cancel-ex');
+        if (cancelExBtn) {
+            const exId = cancelExBtn.dataset.id;
+            document.getElementById('ex-edit-' + exId).classList.add('d-none');
+            document.getElementById('ex-row-' + exId).classList.remove('d-none');
+            return;
+        }
+
+        // ── Save exercise edit ──────────────────────────────────────────────
+        const saveExBtn = e.target.closest('.btn-save-ex');
+        if (saveExBtn) {
+            const exId    = saveExBtn.dataset.id;
+            const editRow = document.getElementById('ex-edit-' + exId);
+            const name    = editRow.querySelector('.ex-edit-name').value.trim();
+            const sets    = editRow.querySelector('.ex-edit-sets').value;
+            const reps    = editRow.querySelector('.ex-edit-reps').value;
+            const repUnit = editRow.querySelector(`input[name="eu_${exId}"]:checked`)?.value ?? '0';
+            const notes   = editRow.querySelector('.ex-edit-notes').value.trim();
+
+            if (!name) { alert('Exercise name is required.'); return; }
+
+            setBusy(saveExBtn, true);
+            try {
+                const data = await post('/Admin/EditDayExercise', { id: exId, exerciseName: name, sets, reps, repUnit, notes });
+                if (!data.success) { alert(data.message || 'Error saving.'); setBusy(saveExBtn, false); return; }
+
+                const viewRow = document.getElementById('ex-row-' + exId);
+                const ul = unitLabel(data.repUnit);
+                viewRow.querySelector('.ex-view-name').textContent   = data.exerciseName;
+                viewRow.querySelector('.ex-view-badge').innerHTML     = `<span class="badge bg-primary">${data.sets} × ${data.reps} ${ul}</span>`;
+                viewRow.querySelector('.ex-view-notes').textContent   = data.notes ?? '';
+
+                // Sync data attributes on the Edit button
+                const editBtn = viewRow.querySelector('.btn-edit-ex');
+                editBtn.dataset.name  = data.exerciseName;
+                editBtn.dataset.sets  = data.sets;
+                editBtn.dataset.reps  = data.reps;
+                editBtn.dataset.unit  = data.repUnit;
+                editBtn.dataset.notes = data.notes ?? '';
+
+                editRow.classList.add('d-none');
+                viewRow.classList.remove('d-none');
+            } catch { alert('Network error.'); }
+            finally  { setBusy(saveExBtn, false); }
+            return;
+        }
+
+    }); // end delegated click
+
+})();
+</script>
+}

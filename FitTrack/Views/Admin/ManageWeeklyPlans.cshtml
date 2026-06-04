@@ -1,0 +1,349 @@
+@model FitTrack.Models.WorkoutProgram
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = $"Admin — Weekly Plans: {Model.Name}";
+    var weeks = Model.WeeklyPlans.OrderBy(w => w.WeekNumber).ToList();
+}
+
+<style>
+    .week-card { transition: opacity 0.3s; }
+</style>
+
+<div class="container mt-3">
+
+    <div id="page-flash" class="d-none mb-3 alert" role="alert"></div>
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+            <li class="breadcrumb-item"><a asp-action="Edit" asp-route-id="@Model.Id">@Model.Name</a></li>
+            <li class="breadcrumb-item active">Weekly Plans</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Weekly Plans</h1>
+            <small class="text-muted">@Model.Name &bull; <span id="week-count">@weeks.Count</span> week(s)</small>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">&larr; Back to Programs</a>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    @* ── Week cards grid ──────────────────────────────────────────────────── *@
+    <div class="row g-3 mb-4" id="weeks-container">
+        @if (!weeks.Any())
+        {
+            <div class="col-12" id="no-weeks-msg">
+                <div class="alert alert-info">No weekly plans yet. Add one below.</div>
+            </div>
+        }
+        @foreach (var week in weeks)
+        {
+            <div class="col-md-6 col-lg-4 week-card" id="week-card-@week.Id" data-week-id="@week.Id">
+                @* View mode *@
+                <div class="card shadow-sm h-100 week-view-card">
+                    <div class="card-header d-flex justify-content-between align-items-center"
+                         style="background:linear-gradient(135deg,#6f42c1,#9b6dff);color:#fff;">
+                        <span class="fw-bold week-display-number">Week @week.WeekNumber</span>
+                        <span class="badge bg-white text-dark">@week.Days.Count day(s)</span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title mb-1 week-display-title">@week.Title</h6>
+                        <p class="card-text text-muted small mb-0 week-display-desc">@week.Description</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-top-0 d-flex gap-1 align-items-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-week"
+                                data-week-id="@week.Id" data-week-number="@week.WeekNumber"
+                                data-title="@week.Title" data-description="@(week.Description ?? "")">Edit</button>
+                        <a asp-action="ManageWeekDays" asp-route-id="@week.Id"
+                           class="btn btn-sm btn-outline-success">Manage Days</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-auto btn-delete-week"
+                                data-week-id="@week.Id" data-week-number="@week.WeekNumber">Delete</button>
+                    </div>
+                </div>
+                @* Edit mode (hidden) *@
+                <div class="card shadow-sm h-100 week-edit-card d-none">
+                    <div class="card-header text-white" style="background:#6f42c1;">
+                        <span class="fw-bold">Edit Week</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">Week #</label>
+                            <input type="number" class="form-control form-control-sm week-edit-number"
+                                   value="@week.WeekNumber" min="1" max="52" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">Title <span class="text-danger">*</span></label>
+                            <input class="form-control form-control-sm week-edit-title"
+                                   value="@week.Title" maxlength="200" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">Description</label>
+                            <input class="form-control form-control-sm week-edit-desc"
+                                   value="@(week.Description ?? "")" maxlength="1000" />
+                        </div>
+                        <div id="week-edit-flash-@week.Id" class="d-none small alert py-1 mt-2" role="alert"></div>
+                    </div>
+                    <div class="card-footer bg-transparent d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-success btn-save-week"
+                                data-week-id="@week.Id">Save</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-week"
+                                data-week-id="@week.Id">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ── Add new week form ────────────────────────────────────────────────── *@
+    <div class="card shadow-sm">
+        <div class="card-header text-white" style="background:#6f42c1;"><h5 class="mb-0">+ Add New Week</h5></div>
+        <div class="card-body p-4">
+            <div id="add-week-flash" class="d-none mb-3 alert" role="alert"></div>
+            <div class="row g-3" id="add-week-form" data-program-id="@Model.Id">
+                <div class="col-sm-2">
+                    <label class="form-label fw-semibold">Week # <span class="text-danger">*</span></label>
+                    <input id="add-week-number" type="number" class="form-control"
+                           value="@(weeks.Any() ? weeks.Max(w => w.WeekNumber) + 1 : 1)"
+                           min="1" max="52" />
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                    <input id="add-week-title" class="form-control"
+                           placeholder="e.g. Week 1 – Foundation" maxlength="200" />
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                    <input id="add-week-desc" class="form-control"
+                           placeholder="Overview of this week…" maxlength="1000" />
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="button" id="btn-add-week" class="btn px-4 text-white" style="background:#6f42c1;">Add Week</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const aft = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function esc(s)     { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escA(s)    { return String(s ?? '').replace(/"/g,'&quot;'); }
+
+    function flash(elId, msg, isErr) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.className = 'alert ' + (isErr ? 'alert-danger' : 'alert-success');
+        if (elId.startsWith('week-edit-flash')) el.classList.add('small','py-1','mt-2');
+        else el.classList.add('mb-3');
+        el.textContent = msg;
+        el.classList.remove('d-none');
+        if (!isErr) setTimeout(() => el.classList.add('d-none'), 2000);
+    }
+
+    async function post(url, params) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': aft, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(params).toString()
+        });
+        return res.json();
+    }
+
+    function setBusy(btn, busy) {
+        btn.disabled = busy;
+        if (busy) { btn.dataset.orig = btn.textContent; btn.textContent = 'Saving…'; }
+        else       { btn.textContent = btn.dataset.orig || btn.textContent; }
+    }
+
+    function fadeRemove(el, cb) {
+        el.style.opacity = '0';
+        setTimeout(() => { el.remove(); if (cb) cb(); }, 300);
+    }
+
+    function updateWeekCount() {
+        document.getElementById('week-count').textContent = document.querySelectorAll('.week-card').length;
+    }
+
+    // ── Build new week card HTML ───────────────────────────────────────────────
+    function buildWeekCard(w) {
+        return `
+<div class="col-md-6 col-lg-4 week-card" id="week-card-${w.id}" data-week-id="${w.id}" style="opacity:0;transition:opacity 0.3s">
+  <div class="card shadow-sm h-100 week-view-card">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         style="background:linear-gradient(135deg,#6f42c1,#9b6dff);color:#fff;">
+      <span class="fw-bold week-display-number">Week ${w.weekNumber}</span>
+      <span class="badge bg-white text-dark">0 day(s)</span>
+    </div>
+    <div class="card-body">
+      <h6 class="card-title mb-1 week-display-title">${esc(w.title)}</h6>
+      <p class="card-text text-muted small mb-0 week-display-desc">${esc(w.description ?? '')}</p>
+    </div>
+    <div class="card-footer bg-transparent border-top-0 d-flex gap-1 align-items-center">
+      <button type="button" class="btn btn-sm btn-outline-primary btn-edit-week"
+              data-week-id="${w.id}" data-week-number="${w.weekNumber}"
+              data-title="${escA(w.title)}" data-description="${escA(w.description ?? '')}">Edit</button>
+      <a href="/Admin/ManageWeekDays/${w.id}" class="btn btn-sm btn-outline-success">Manage Days</a>
+      <button type="button" class="btn btn-sm btn-outline-danger ms-auto btn-delete-week"
+              data-week-id="${w.id}" data-week-number="${w.weekNumber}">Delete</button>
+    </div>
+  </div>
+  <div class="card shadow-sm h-100 week-edit-card d-none">
+    <div class="card-header text-white" style="background:#6f42c1;"><span class="fw-bold">Edit Week</span></div>
+    <div class="card-body p-3">
+      <div class="mb-2">
+        <label class="form-label small fw-semibold mb-1">Week #</label>
+        <input type="number" class="form-control form-control-sm week-edit-number" value="${w.weekNumber}" min="1" max="52" />
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-semibold mb-1">Title <span class="text-danger">*</span></label>
+        <input class="form-control form-control-sm week-edit-title" value="${escA(w.title)}" maxlength="200" />
+      </div>
+      <div class="mb-2">
+        <label class="form-label small fw-semibold mb-1">Description</label>
+        <input class="form-control form-control-sm week-edit-desc" value="${escA(w.description ?? '')}" maxlength="1000" />
+      </div>
+      <div id="week-edit-flash-${w.id}" class="d-none small alert py-1 mt-2" role="alert"></div>
+    </div>
+    <div class="card-footer bg-transparent d-flex gap-1">
+      <button type="button" class="btn btn-sm btn-success btn-save-week" data-week-id="${w.id}">Save</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-week" data-week-id="${w.id}">Cancel</button>
+    </div>
+  </div>
+</div>`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ADD WEEK
+    // ═══════════════════════════════════════════════════════════════════════════
+    document.getElementById('btn-add-week').addEventListener('click', async function () {
+        const programId = document.getElementById('add-week-form').dataset.programId;
+        const weekNumber = document.getElementById('add-week-number').value;
+        const title      = document.getElementById('add-week-title').value.trim();
+        const description = document.getElementById('add-week-desc').value.trim();
+
+        if (!title) { flash('add-week-flash', 'Title is required.', true); return; }
+
+        setBusy(this, true);
+        try {
+            const data = await post('/Admin/CreateWeek', { workoutProgramId: programId, weekNumber, title, description });
+            if (!data.success) { flash('add-week-flash', data.message || 'Error.', true); return; }
+
+            // Hide "no weeks" message if present
+            document.getElementById('no-weeks-msg')?.remove();
+
+            const container = document.getElementById('weeks-container');
+            container.insertAdjacentHTML('beforeend', buildWeekCard(data));
+            const newCard = document.getElementById('week-card-' + data.id);
+            requestAnimationFrame(() => newCard.style.opacity = '1');
+
+            // Bump week number input for next add
+            document.getElementById('add-week-number').value = data.weekNumber + 1;
+            document.getElementById('add-week-title').value = '';
+            document.getElementById('add-week-desc').value  = '';
+
+            flash('add-week-flash', 'Week added!', false);
+            updateWeekCount();
+        } catch { flash('add-week-flash', 'Network error.', true); }
+        finally  { setBusy(this, false); }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DELEGATED: delete / edit / save / cancel week
+    // ═══════════════════════════════════════════════════════════════════════════
+    document.addEventListener('click', async function (e) {
+
+        // ── Delete week ─────────────────────────────────────────────────────
+        const delBtn = e.target.closest('.btn-delete-week');
+        if (delBtn) {
+            const weekId = delBtn.dataset.weekId;
+            const num    = delBtn.dataset.weekNumber;
+            if (!confirm(`Delete Week ${num} and all its days?`)) return;
+            setBusy(delBtn, true);
+            try {
+                const data = await post('/Admin/DeleteWeek', { id: weekId });
+                if (!data.success) { alert(data.message || 'Could not delete.'); setBusy(delBtn, false); return; }
+                fadeRemove(document.getElementById('week-card-' + weekId), () => {
+                    updateWeekCount();
+                    if (!document.querySelectorAll('.week-card').length) {
+                        document.getElementById('weeks-container').insertAdjacentHTML('afterbegin',
+                            '<div class="col-12" id="no-weeks-msg"><div class="alert alert-info">No weekly plans yet. Add one below.</div></div>');
+                    }
+                });
+            } catch { alert('Network error.'); setBusy(delBtn, false); }
+            return;
+        }
+
+        // ── Enter edit mode ─────────────────────────────────────────────────
+        const editBtn = e.target.closest('.btn-edit-week');
+        if (editBtn) {
+            const weekId = editBtn.dataset.weekId;
+            const card   = document.getElementById('week-card-' + weekId);
+            card.querySelector('.week-view-card').classList.add('d-none');
+            const ec = card.querySelector('.week-edit-card');
+            ec.querySelector('.week-edit-number').value = editBtn.dataset.weekNumber;
+            ec.querySelector('.week-edit-title').value  = editBtn.dataset.title;
+            ec.querySelector('.week-edit-desc').value   = editBtn.dataset.description;
+            ec.classList.remove('d-none');
+            return;
+        }
+
+        // ── Cancel edit ─────────────────────────────────────────────────────
+        const cancelBtn = e.target.closest('.btn-cancel-week');
+        if (cancelBtn) {
+            const weekId = cancelBtn.dataset.weekId;
+            const card   = document.getElementById('week-card-' + weekId);
+            card.querySelector('.week-edit-card').classList.add('d-none');
+            card.querySelector('.week-view-card').classList.remove('d-none');
+            return;
+        }
+
+        // ── Save edit ───────────────────────────────────────────────────────
+        const saveBtn = e.target.closest('.btn-save-week');
+        if (saveBtn) {
+            const weekId     = saveBtn.dataset.weekId;
+            const card       = document.getElementById('week-card-' + weekId);
+            const ec         = card.querySelector('.week-edit-card');
+            const weekNumber = ec.querySelector('.week-edit-number').value;
+            const title      = ec.querySelector('.week-edit-title').value.trim();
+            const description = ec.querySelector('.week-edit-desc').value.trim();
+
+            if (!title) { flash('week-edit-flash-' + weekId, 'Title is required.', true); return; }
+
+            setBusy(saveBtn, true);
+            try {
+                const data = await post('/Admin/EditWeek', { id: weekId, weekNumber, title, description });
+                if (!data.success) { flash('week-edit-flash-' + weekId, data.message || 'Error.', true); setBusy(saveBtn, false); return; }
+
+                // Update view card
+                const vc = card.querySelector('.week-view-card');
+                vc.querySelector('.week-display-number').textContent = 'Week ' + data.weekNumber;
+                vc.querySelector('.week-display-title').textContent  = data.title;
+                vc.querySelector('.week-display-desc').textContent   = data.description ?? '';
+
+                // Sync data attrs on edit button
+                const eb = vc.querySelector('.btn-edit-week');
+                eb.dataset.weekNumber  = data.weekNumber;
+                eb.dataset.title       = data.title;
+                eb.dataset.description = data.description ?? '';
+
+                ec.classList.add('d-none');
+                vc.classList.remove('d-none');
+            } catch { flash('week-edit-flash-' + weekId, 'Network error.', true); }
+            finally  { setBusy(saveBtn, false); }
+            return;
+        }
+
+    }); // end delegated click
+
+})();
+</script>
+}

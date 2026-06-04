@@ -1,0 +1,381 @@
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "FitTrack — Your Fitness Journey Starts Here";
+    var featured = ViewBag.FeaturedPrograms as IList<WorkoutProgram> ?? new List<WorkoutProgram>();
+}
+
+<style>
+    /* ── Hero ──────────────────────────────────────────────────────────────── */
+    .ft-hero {
+        background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%);
+        min-height: 500px;
+        display: flex; align-items: center;
+        position: relative; overflow: hidden;
+    }
+    .ft-hero::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(224,201,127,.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .ft-hero-title {
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 800; line-height: 1.15;
+        color: #fff;
+    }
+    .ft-hero-title span {
+        background: linear-gradient(90deg, #e0c97f 0%, #f5d97e 40%, #c9a227 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .ft-hero-sub {
+        color: rgba(255,255,255,.65);
+        font-size: 1.1rem; max-width: 520px;
+    }
+    .ft-btn-gold {
+        background: linear-gradient(135deg, #c9a227 0%, #e0c97f 100%);
+        color: #0d0d1a; font-weight: 700; border: none;
+        padding: .65rem 1.75rem; border-radius: 10px;
+        font-size: 1rem; transition: opacity .2s, transform .15s;
+        text-decoration: none; display: inline-block;
+    }
+    .ft-btn-gold:hover { opacity: .88; transform: translateY(-2px); color: #0d0d1a; }
+    .ft-btn-outline-white {
+        color: rgba(255,255,255,.85); border: 1.5px solid rgba(255,255,255,.3);
+        padding: .65rem 1.75rem; border-radius: 10px; font-size: 1rem;
+        font-weight: 500; background: transparent;
+        transition: background .2s, border-color .2s, color .2s;
+        text-decoration: none; display: inline-block;
+    }
+    .ft-btn-outline-white:hover {
+        background: rgba(255,255,255,.08);
+        border-color: rgba(255,255,255,.55);
+        color: #fff;
+    }
+
+    /* ── Stats bar ──────────────────────────────────────────────────────────── */
+    .ft-stats-bar {
+        background: #0d0d1a;
+        border-top: 1px solid rgba(255,255,255,.06);
+        border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .ft-stat-num {
+        font-size: 2rem; font-weight: 800;
+        background: linear-gradient(90deg, #e0c97f, #c9a227);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.15;
+    }
+    .ft-stat-label {
+        color: rgba(255,255,255,.45); font-size: .72rem;
+        text-transform: uppercase; letter-spacing: .1em; font-weight: 600;
+    }
+    .ft-stat-divider {
+        width: 1px; background: rgba(255,255,255,.1);
+        align-self: stretch; margin: .5rem 0;
+    }
+
+    /* ── Section headings ───────────────────────────────────────────────────── */
+    .ft-section-eyebrow {
+        font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+        text-transform: uppercase; color: #c9a227; margin-bottom: .4rem;
+    }
+    .ft-section-title {
+        font-size: 1.75rem; font-weight: 800; color: #1e293b;
+    }
+
+    /* ── Program cards ──────────────────────────────────────────────────────── */
+    .ft-prog-card {
+        border-radius: 14px; border: 1.5px solid #e9ecef;
+        overflow: hidden; background: #fff;
+        transition: transform .2s, box-shadow .2s;
+        height: 100%; display: flex; flex-direction: column;
+    }
+    .ft-prog-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(0,0,0,.1); }
+
+    .ft-prog-banner {
+        height: 160px; overflow: hidden; position: relative;
+        background: linear-gradient(135deg, #0d0d1a, #1a1a2e);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .ft-prog-banner img {
+        width: 100%; height: 100%; object-fit: cover;
+        position: absolute; inset: 0;
+    }
+    .ft-prog-banner-icon { font-size: 3.5rem; z-index: 1; }
+
+    .ft-prog-body { padding: 1.1rem; flex: 1; display: flex; flex-direction: column; }
+    .ft-prog-name { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: .5rem; }
+    .ft-prog-desc { font-size: .83rem; color: #64748b; flex: 1; margin-bottom: .75rem; line-height: 1.5; }
+
+    /* Star rating */
+    .ft-stars { display: flex; gap: 2px; align-items: center; }
+    .ft-star { font-size: .85rem; color: #d1d5db; }
+    .ft-star.lit { color: #f59e0b; }
+    .ft-star.half { position: relative; color: #d1d5db; }
+    .ft-star.half::before {
+        content: '★'; position: absolute; left: 0; top: 0;
+        color: #f59e0b; width: 50%; overflow: hidden; white-space: nowrap;
+    }
+    .ft-rating-num { font-size: .78rem; font-weight: 700; color: #475569; margin-left: 4px; }
+    .ft-rating-count { font-size: .75rem; color: #94a3b8; margin-left: 2px; }
+
+    .ft-prog-footer { padding: .9rem 1.1rem; border-top: 1px solid #f1f5f9; }
+    .ft-prog-view-btn {
+        display: block; width: 100%; text-align: center;
+        background: #1e293b; color: #fff; font-weight: 600;
+        font-size: .88rem; padding: .5rem; border-radius: 8px;
+        text-decoration: none; transition: background .15s;
+    }
+    .ft-prog-view-btn:hover { background: #334155; color: #fff; }
+
+    /* Level badge colors */
+    .badge-beginner     { background: #dcfce7; color: #166534; }
+    .badge-intermediate { background: #fef9c3; color: #854d0e; }
+    .badge-advanced     { background: #fee2e2; color: #991b1b; }
+    .badge-category     { background: #eff6ff; color: #1d4ed8; }
+
+    /* ── Feature cards ──────────────────────────────────────────────────────── */
+    .ft-feature-card {
+        background: #fff; border-radius: 14px;
+        border: 1.5px solid #e9ecef; padding: 1.75rem 1.5rem;
+        text-align: center; height: 100%;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .ft-feature-card:hover { border-color: #c9a227; box-shadow: 0 6px 24px rgba(201,162,39,.1); }
+    .ft-feature-icon {
+        width: 60px; height: 60px; border-radius: 14px;
+        background: linear-gradient(135deg, #fef9c3, #fef3c7);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.7rem; margin: 0 auto 1rem;
+    }
+    .ft-feature-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: .4rem; }
+    .ft-feature-desc  { font-size: .85rem; color: #64748b; line-height: 1.5; margin: 0; }
+
+    /* ── CTA banner ─────────────────────────────────────────────────────────── */
+    .ft-cta-banner {
+        background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%);
+        position: relative; overflow: hidden;
+    }
+    .ft-cta-banner::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse 60% 80% at 50% 100%, rgba(224,201,127,.07) 0%, transparent 70%);
+        pointer-events: none;
+    }
+</style>
+
+@* ── Hero ──────────────────────────────────────────────────────────────── *@
+<section class="ft-hero">
+    <div class="container py-5 position-relative">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <p class="ft-section-eyebrow mb-2">&#127947;&#65039; Welcome to FitTrack</p>
+                <h1 class="ft-hero-title mb-3">
+                    Your Fitness Journey<br><span>Starts Here</span>
+                </h1>
+                <p class="ft-hero-sub mx-auto mb-4">
+                    Join thousands of members tracking their workouts with structured programs built for every level.
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a asp-controller="WorkoutPrograms" asp-action="Index" class="ft-btn-gold">
+                        Browse Programs
+                    </a>
+                    @if (!User.Identity!.IsAuthenticated)
+                    {
+                        <a asp-controller="Account" asp-action="Register" class="ft-btn-outline-white">
+                            Get Started Free
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ── Stats bar ──────────────────────────────────────────────────────────── *@
+<section class="ft-stats-bar py-4">
+    <div class="container">
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-0">
+            <div class="text-center px-4 py-2">
+                <div class="ft-stat-num">@ViewBag.TotalMembers</div>
+                <div class="ft-stat-label">Members</div>
+            </div>
+            <div class="ft-stat-divider d-none d-sm-block"></div>
+            <div class="text-center px-4 py-2">
+                <div class="ft-stat-num">@ViewBag.TotalPrograms</div>
+                <div class="ft-stat-label">Programs</div>
+            </div>
+            <div class="ft-stat-divider d-none d-sm-block"></div>
+            <div class="text-center px-4 py-2">
+                <div class="ft-stat-num">@ViewBag.TotalWorkoutLogs</div>
+                <div class="ft-stat-label">Workouts Logged</div>
+            </div>
+            <div class="ft-stat-divider d-none d-sm-block"></div>
+            <div class="text-center px-4 py-2">
+                <div class="ft-stat-num">@ViewBag.TotalExercises</div>
+                <div class="ft-stat-label">Exercises Available</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ── Top rated programs ─────────────────────────────────────────────────── *@
+@if (featured.Any())
+{
+    <section class="py-5" style="background:#f8fafc;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <p class="ft-section-eyebrow mb-1">&#11088; Highest Rated</p>
+                    <h2 class="ft-section-title mb-0">Top Rated Programs</h2>
+                </div>
+                <a asp-controller="WorkoutPrograms" asp-action="Index"
+                   class="btn btn-outline-secondary btn-sm d-none d-md-inline-flex align-items-center gap-1">
+                    View all &rarr;
+                </a>
+            </div>
+
+            <div class="row g-4">
+                @foreach (var p in featured)
+                {
+                    var reviewCount = p.ProgramReviews.Count;
+                    var avgRating   = reviewCount > 0 ? p.ProgramReviews.Average(r => r.Rating) : 0.0;
+                    int fullStars   = (int)avgRating;
+                    bool halfStar   = (avgRating - fullStars) >= 0.5;
+                    int durationDisplay = p.WeeklyPlans.Count > 0 ? p.WeeklyPlans.Count : p.DurationWeeks;
+
+                    string levelBadge = p.Level switch {
+                        Level.Beginner     => "badge-beginner",
+                        Level.Intermediate => "badge-intermediate",
+                        Level.Advanced     => "badge-advanced",
+                        _                  => "badge-secondary"
+                    };
+
+                    <div class="col-md-4">
+                        <div class="ft-prog-card">
+                            <div class="ft-prog-banner">
+                                @if (!string.IsNullOrEmpty(p.ImageUrl))
+                                {
+                                    <img src="@p.ImageUrl" alt="@p.Name" />
+                                }
+                                <span class="ft-prog-banner-icon">&#127947;&#65039;</span>
+                            </div>
+                            <div class="ft-prog-body">
+                                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                                    <span class="badge @levelBadge" style="font-size:.72rem;font-weight:600;">@p.Level</span>
+                                    <span class="badge badge-category" style="font-size:.72rem;font-weight:600;">@p.Category</span>
+                                    <span class="badge bg-light text-secondary ms-auto" style="font-size:.72rem;">@durationDisplay wks</span>
+                                </div>
+                                <div class="ft-prog-name">@p.Name</div>
+
+                                @* Star rating *@
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="ft-stars">
+                                        @for (int s = 1; s <= 5; s++)
+                                        {
+                                            if (s <= fullStars)
+                                            {
+                                                <span class="ft-star lit">&#9733;</span>
+                                            }
+                                            else if (s == fullStars + 1 && halfStar)
+                                            {
+                                                <span class="ft-star half">&#9733;</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="ft-star">&#9733;</span>
+                                            }
+                                        }
+                                    </div>
+                                    @if (reviewCount > 0)
+                                    {
+                                        <span class="ft-rating-num">@avgRating.ToString("F1")</span>
+                                        <span class="ft-rating-count">(@reviewCount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ft-rating-count ms-1">No reviews yet</span>
+                                    }
+                                </div>
+
+                                <p class="ft-prog-desc">
+                                    @(p.Description.Length > 100 ? p.Description[..100] + "…" : p.Description)
+                                </p>
+                            </div>
+                            <div class="ft-prog-footer">
+                                <a asp-controller="WorkoutPrograms" asp-action="Details" asp-route-id="@p.Id"
+                                   class="ft-prog-view-btn">
+                                    View Program
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="text-center mt-4 d-md-none">
+                <a asp-controller="WorkoutPrograms" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    View all programs &rarr;
+                </a>
+            </div>
+        </div>
+    </section>
+}
+
+@* ── Why FitTrack ───────────────────────────────────────────────────────── *@
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="text-center mb-5">
+            <p class="ft-section-eyebrow">Why Choose Us</p>
+            <h2 class="ft-section-title">Everything You Need to Succeed</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="ft-feature-card">
+                    <div class="ft-feature-icon">&#128203;</div>
+                    <div class="ft-feature-title">Structured Plans</div>
+                    <p class="ft-feature-desc">Weekly plans with day-by-day workouts so you always know what to do next.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="ft-feature-card">
+                    <div class="ft-feature-icon">&#128202;</div>
+                    <div class="ft-feature-title">Track Progress</div>
+                    <p class="ft-feature-desc">Log workouts and visualize your progress with charts and history.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="ft-feature-card">
+                    <div class="ft-feature-icon">&#128197;</div>
+                    <div class="ft-feature-title">Smart Calendar</div>
+                    <p class="ft-feature-desc">Auto-schedule workouts when you enroll so every session is planned.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="ft-feature-card">
+                    <div class="ft-feature-icon">&#11088;</div>
+                    <div class="ft-feature-title">Community</div>
+                    <p class="ft-feature-desc">Rate programs and read real reviews from members who have done them.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* ── CTA banner (guests only) ───────────────────────────────────────────── *@
+@if (!User.Identity!.IsAuthenticated)
+{
+    <section class="ft-cta-banner py-5 text-center position-relative">
+        <div class="container py-2 position-relative">
+            <h2 class="fw-bold mb-3" style="color:#fff;font-size:2rem;">Ready to Start?</h2>
+            <p class="mb-4" style="color:rgba(255,255,255,.6);font-size:1rem;max-width:440px;margin:0 auto .75rem;">
+                Create a free account and enroll in your first program today.
+            </p>
+            <a asp-controller="Account" asp-action="Register" class="ft-btn-gold">
+                Create Free Account
+            </a>
+        </div>
+    </section>
+}

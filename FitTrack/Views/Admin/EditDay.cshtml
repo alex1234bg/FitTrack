@@ -1,0 +1,83 @@
+@model FitTrack.Models.WeeklyPlanDay
+
+@{
+    ViewData["Title"] = $"Admin — Edit Day {Model.DayNumber}";
+}
+
+<div class="container mt-3">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Programs</a></li>
+            <li class="breadcrumb-item">
+                <a asp-action="ManageWeekDays" asp-route-id="@Model.WeeklyPlanId">Week Days</a>
+            </li>
+            <li class="breadcrumb-item active">Edit Day @Model.DayNumber</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Edit Day</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="EditDay" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="WeeklyPlanId" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="DayNumber" class="form-label fw-semibold"></label>
+                            <select asp-for="DayNumber" class="form-select">
+                                @for (int d = 1; d <= 7; d++)
+                                {
+                                    <option value="@d" selected="@(Model.DayNumber == d ? "selected" : null)">@d</option>
+                                }
+                            </select>
+                            <span asp-validation-for="DayNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DayName" class="form-label fw-semibold"></label>
+                            <select asp-for="DayName" class="form-select">
+                                @foreach (var name in new[] { "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday" })
+                                {
+                                    <option value="@name" selected="@(Model.DayName == name ? "selected" : null)">@name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="DayName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Focus" class="form-label fw-semibold"></label>
+                            <input asp-for="Focus" class="form-control" />
+                            <span asp-validation-for="Focus" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Notes" class="form-label fw-semibold">
+                                Notes <span class="text-muted fw-normal">(optional)</span>
+                            </label>
+                            <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="Notes" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                            <a asp-action="ManageWeekDays" asp-route-id="@Model.WeeklyPlanId"
+                               class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

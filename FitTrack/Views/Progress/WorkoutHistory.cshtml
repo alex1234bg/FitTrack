@@ -1,0 +1,135 @@
+@model IEnumerable<FitTrack.Models.WorkoutLog>
+@using FitTrack.Models
+
+@{
+    ViewData["Title"] = "Workout History";
+    var logs = Model.ToList();
+
+    // Group by year-month descending
+    var groups = logs
+        .GroupBy(w => new { w.LoggedOn.Year, w.LoggedOn.Month })
+        .OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month)
+        .ToList();
+}
+
+<style>
+    .woh-month-header {
+        background: linear-gradient(90deg, #1a1a2e, #16213e);
+        color: #fff;
+        border-radius: 10px;
+        padding: .65rem 1.1rem;
+        margin-bottom: .75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .woh-month-label { font-weight: 700; font-size: .95rem; }
+    .woh-month-stats { font-size: .78rem; color: rgba(255,255,255,.65); }
+
+    /* Timeline inside each month */
+    .woh-timeline { padding-left: 1rem; }
+    .woh-entry {
+        position: relative;
+        padding: .9rem 1rem .9rem 2.2rem;
+        margin-bottom: .5rem;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 1px 6px rgba(0,0,0,.07);
+        border-left: 3px solid #e9ecef;
+        transition: border-color .2s;
+    }
+    .woh-entry:hover { border-left-color: #c9a227; }
+
+    .woh-dot {
+        position: absolute;
+        left: -7px; top: 1rem;
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: #c9a227;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #c9a227;
+    }
+
+    /* Feeling badges */
+    .feeling-great  { background: #d1fae5; color: #065f46; }
+    .feeling-good   { background: #dbeafe; color: #1e40af; }
+    .feeling-okay   { background: #fef3c7; color: #92400e; }
+    .feeling-tough  { background: #fee2e2; color: #991b1b; }
+    .feeling-badge  { font-size: .75rem; font-weight: 600; padding: .2rem .55rem; border-radius: 20px; }
+</style>
+
+<div class="container mt-4" style="max-width:760px">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Progress</a></li>
+            <li class="breadcrumb-item active">Workout History</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Workout History</h1>
+            <small class="text-muted">@logs.Count workout@(logs.Count == 1 ? "" : "s") total</small>
+        </div>
+        <a asp-action="LogWorkout" class="btn btn-warning fw-semibold">+ Log Workout</a>
+    </div>
+
+    @if (!logs.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <p class="fs-5">No workouts logged yet.</p>
+            <a asp-action="LogWorkout" class="btn btn-warning">Log your first workout</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in groups)
+        {
+            var monthName   = new DateTime(group.Key.Year, group.Key.Month, 1).ToString("MMMM yyyy");
+            var totalMins   = group.Sum(w => w.DurationMinutes);
+            var totalCount  = group.Count();
+
+            <div class="mb-4">
+                <div class="woh-month-header">
+                    <span class="woh-month-label">@monthName</span>
+                    <span class="woh-month-stats">
+                        @totalCount workout@(totalCount == 1 ? "" : "s") &bull; @totalMins min total
+                    </span>
+                </div>
+
+                <div class="woh-timeline">
+                    @foreach (var w in group.OrderByDescending(x => x.LoggedOn))
+                    {
+                        var (emoji, cls) = w.Feeling switch {
+                            Feeling.Great => ("😄", "feeling-great"),
+                            Feeling.Good  => ("🙂", "feeling-good"),
+                            Feeling.Okay  => ("😐", "feeling-okay"),
+                            _             => ("😓", "feeling-tough")
+                        };
+
+                        <div class="woh-entry">
+                            <div class="woh-dot"></div>
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div>
+                                    <div class="fw-semibold">@w.WorkoutProgram.Name</div>
+                                    <div class="text-muted small">
+                                        @w.LoggedOn.ToLocalTime().ToString("dddd, MMM d")
+                                        &bull; @w.DurationMinutes min
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(w.Notes))
+                                    {
+                                        <div class="text-muted fst-italic mt-1" style="font-size:.82rem">
+                                            "@w.Notes"
+                                        </div>
+                                    }
+                                </div>
+                                <span class="feeling-badge @cls flex-shrink-0">@emoji @w.Feeling</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
