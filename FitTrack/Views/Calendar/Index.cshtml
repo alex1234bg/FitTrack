@@ -27,6 +27,7 @@
         .ToDictionary(x => x.id, x => x.color);
 
     var dayNames = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+    var allProgramsList = (List<FitTrack.Models.WorkoutProgram>)ViewBag.AllPrograms;
 }
 
 <style>
@@ -210,6 +211,15 @@
         text-align: center; padding: 2.5rem 1rem; color: #94a3b8;
     }
     .empty-panel .empty-icon { font-size: 2.5rem; display: block; margin-bottom: .75rem; }
+
+    /* Add workout form */
+    .add-workout-form select { font-size: .82rem; }
+    .btn-remove-entry {
+        background: none; border: none; color: #ef4444;
+        font-size: .85rem; line-height: 1; padding: 0 2px;
+        cursor: pointer; opacity: .6; transition: opacity .15s;
+    }
+    .btn-remove-entry:hover { opacity: 1; }
 </style>
 
 <div class="cal-page">
@@ -336,6 +346,12 @@
         )
     );
 
+    const allPrograms = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+            allProgramsList.Select(p => new { id = p.Id, name = p.Name })
+        )
+    );
+
     // programId (string) → color
     const programColorMap = @Html.Raw(
         System.Text.Json.JsonSerializer.Serialize(
@@ -405,6 +421,7 @@
                     <p class="mb-0 small fw-semibold">Rest Day</p>
                     <p class="mb-0 small text-muted">No workouts scheduled.</p>
                 </div>`;
+            body.appendChild(buildAddForm());
             return;
         }
 
@@ -412,6 +429,7 @@
         data.forEach((entry, idx) => {
             body.appendChild(buildEntryCard(entry, idx));
         });
+        body.appendChild(buildAddForm());
     };
 
     // ── Build entry card ───────────────────────────────────────────────────
@@ -451,6 +469,7 @@
         <div class="entry-program-name">${escHtml(entry.programName)}</div>
         <div class="mt-1">${weekBadge}${focusBadge}</div>
     </div>
+    <button class="btn-remove-entry" onclick="removeEntry(${entry.id})" title="Remove">✕</button>
 </div>
 <div class="entry-card-body">
     ${exHtml}
@@ -519,6 +538,88 @@
         btn.disabled = false;
         btn.textContent = 'Save';
     };
+
+    // ── Build add-workout form ─────────────────────────────────────────────
+    function buildAddForm() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'add-workout-form mt-2';
+
+        const options = allPrograms.map(p =>
+            `<option value="${p.id}">${escHtml(p.name)}</option>`
+        ).join('');
+
+        wrapper.innerHTML = `
+            <hr class="my-2">
+            <select id="add-program-select" class="form-select form-select-sm mb-2">
+                <option value="">— Select a program —</option>
+                ${options}
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                    onclick="addEntry()">+ Add Workout</button>`;
+        return wrapper;
+    }
+
+    // ── Add entry ──────────────────────────────────────────────────────────
+    window.addEntry = async function () {
+        const select = document.getElementById('add-program-select');
+        const programId = select.value;
+        if (!programId) { select.focus(); return; }
+
+        const data = await post('/Calendar/AddEntry', {
+            programId,
+            year:  currentYear,
+            month: currentMonth,
+            day:   currentDay
+        });
+
+        if (!data.success) { alert(data.message); return; }
+
+        addPillToCell(currentYear, currentMonth, currentDay,
+                      data.entryId, programId, data.programName);
+        openDay(currentYear, currentMonth, currentDay);
+    };
+
+    // ── Remove entry ───────────────────────────────────────────────────────
+    window.removeEntry = async function (id) {
+        const data = await post('/Calendar/RemoveEntry', { id });
+        if (!data.success) { alert(data.message); return; }
+
+        const pill = document.getElementById(`pill-${id}`);
+        if (pill) pill.remove();
+
+        refreshCellTint(currentYear, currentMonth, currentDay);
+        openDay(currentYear, currentMonth, currentDay);
+    };
+
+    // ── Add pill to calendar cell after AddEntry ───────────────────────────
+    function addPillToCell(year, month, day, entryId, programId, programName) {
+        const cell = document.getElementById(`cell-${year}-${month}-${day}`);
+        if (!cell) return;
+
+        let content = cell.querySelector('.cal-cell-content');
+        if (!content) {
+            content = document.createElement('div');
+            content.className = 'cal-cell-content';
+            cell.appendChild(content);
+        }
+
+        let color = programColorMap[programId.toString()];
+        if (!color) {
+            color = colorList[Object.keys(programColorMap).length % colorList.length];
+            programColorMap[programId.toString()] = color;
+        }
+
+        const pill = document.createElement('div');
+        pill.className = 'cal-pill';
+        pill.id = `pill-${entryId}`;
+        pill.style.cssText = `background:${color}22; border:1px solid ${color}44;`;
+        pill.innerHTML = `
+            <span class="cal-pill-name" style="color:${color};">${escHtml(programName)}</span>
+            <span class="cal-pill-status todo" id="pill-status-${entryId}">○</span>`;
+        content.appendChild(pill);
+
+        cell.classList.add('cal-has-workout');
+    }
 
     // ── Utility ────────────────────────────────────────────────────────────
     function escHtml(str) {

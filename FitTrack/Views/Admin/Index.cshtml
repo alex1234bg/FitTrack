@@ -55,8 +55,26 @@
                             <td class="fw-semibold">@p.Name</td>
                             <td><span class="badge @levelClass">@p.Level</span></td>
                             <td><span class="badge bg-primary">@p.Category</span></td>
-                            <td class="text-center">@p.DurationWeeks wks</td>
-                            <td class="text-center">@p.ProgramExercises.Count</td>
+                            <td class="text-center">
+                                @if (p.IsWorkoutOnly)
+                                {
+                                    <span class="badge bg-secondary">Workout</span>
+                                }
+                                else
+                                {
+                                    @($"{p.DurationWeeks} wks")
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (p.IsWorkoutOnly)
+                                {
+                                    @p.ProgramExercises.Count
+                                }
+                                else
+                                {
+                                    @p.WeeklyPlans.SelectMany(w => w.Days).SelectMany(d => d.Exercises).Count()
+                                }
+                            </td>
                             <td class="text-center">@p.UserPrograms.Count</td>
                             <td class="text-center">
                                 <div class="d-flex gap-1 justify-content-center flex-wrap">

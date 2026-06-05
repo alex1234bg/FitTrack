@@ -115,7 +115,10 @@ else
                             }
                             <span class="badge @levelClass">@program.Level</span>
                             <span class="badge @categoryClass">@program.Category</span>
-                            <span class="badge bg-dark">@(program.WeeklyPlans.Count > 0 ? program.WeeklyPlans.Count : program.DurationWeeks) wks</span>
+                            @if (!program.IsWorkoutOnly)
+                            {
+                                <span class="badge bg-dark">@(program.WeeklyPlans.Count > 0 ? program.WeeklyPlans.Count : program.DurationWeeks) wks</span>
+                            }
                         </div>
                         <a asp-action="Details" asp-route-id="@program.Id" class="btn btn-outline-primary mt-auto">
                             View Details

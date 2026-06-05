@@ -49,8 +49,50 @@ public class CalendarController : Controller
         ViewBag.DaysInMonth = DateTime.DaysInMonth(y, m);
         ViewBag.FirstDayOffset = ((int)firstDay.DayOfWeek + 6) % 7;
         ViewBag.Today      = now;
+        ViewBag.AllPrograms = await _db.WorkoutPrograms
+            .Where(p => p.IsWorkoutOnly)
+            .OrderBy(p => p.Name)
+            .ToListAsync();
 
         return View(entries);
+    }
+
+    // POST: /Calendar/AddEntry
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddEntry(int programId, int year, int month, int day)
+    {
+        var userId  = _userManager.GetUserId(User)!;
+        var program = await _db.WorkoutPrograms.FindAsync(programId);
+        if (program is null)
+            return Json(new { success = false, message = "Program not found." });
+
+        var entry = new CalendarEntry
+        {
+            UserId           = userId,
+            WorkoutProgramId = programId,
+            ScheduledDate    = new DateTime(year, month, day)
+        };
+        _db.CalendarEntries.Add(entry);
+        await _db.SaveChangesAsync();
+
+        return Json(new { success = true, entryId = entry.Id, programName = program.Name });
+    }
+
+    // POST: /Calendar/RemoveEntry
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveEntry(int id)
+    {
+        var userId = _userManager.GetUserId(User)!;
+        var entry  = await _db.CalendarEntries.FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
+        if (entry is null)
+            return Json(new { success = false, message = "Entry not found." });
+
+        _db.CalendarEntries.Remove(entry);
+        await _db.SaveChangesAsync();
+
+        return Json(new { success = true });
     }
 
     // POST: /Calendar/ToggleComplete

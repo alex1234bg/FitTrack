@@ -155,7 +155,10 @@
                 <div class="d-flex flex-wrap gap-2 mb-3">
                     <span class="badge @levelClass px-3 py-2">@Model.Level</span>
                     <span class="badge @categoryClass px-3 py-2">@Model.Category</span>
-                    <span class="badge bg-secondary px-3 py-2">@(Model.WeeklyPlans.Count > 0 ? Model.WeeklyPlans.Count : Model.DurationWeeks) wks</span>
+                    @if (!Model.IsWorkoutOnly)
+                    {
+                        <span class="badge bg-secondary px-3 py-2">@(Model.WeeklyPlans.Count > 0 ? Model.WeeklyPlans.Count : Model.DurationWeeks) wks</span>
+                    }
                 </div>
 
                 <div class="text-muted small mb-3">
@@ -221,12 +224,15 @@
                     <div class="stat-label">Total Exercises</div>
                 </div>
             </div>
+            @if (!Model.IsWorkoutOnly)
+            {
             <div class="col-6">
                 <div class="stat-card" style="border-left-color:#6f42c1;">
                     <div class="stat-value" style="color:#6f42c1;">@weeks.Count</div>
                     <div class="stat-label">Weeks Planned</div>
                 </div>
             </div>
+            }
             <div class="col-6">
                 <div class="stat-card" style="border-left-color:#c9a227;">
                     <div class="stat-value" style="color:#c9a227;">@reviewCount</div>

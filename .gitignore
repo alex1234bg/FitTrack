@@ -17,7 +17,6 @@ packages/
 !**/[Pp]ackages/build/
 
 ## ASP.NET Core
-wwwroot/lib/
 *.pfx
 
 ## Logs

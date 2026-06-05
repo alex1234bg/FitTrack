@@ -29,6 +29,9 @@ public class AdminController : Controller
         var programs = await _db.WorkoutPrograms
             .Include(p => p.ProgramExercises)
             .Include(p => p.UserPrograms)
+            .Include(p => p.WeeklyPlans)
+                .ThenInclude(w => w.Days)
+                    .ThenInclude(d => d.Exercises)
             .OrderBy(p => p.Name)
             .ToListAsync();
 

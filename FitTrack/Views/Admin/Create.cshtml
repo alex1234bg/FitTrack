@@ -52,7 +52,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3" id="durationGroup">
                             <label asp-for="DurationWeeks" class="form-label fw-semibold">Duration (weeks)</label>
                             <input asp-for="DurationWeeks" type="number" class="form-control" min="1" max="52" />
                             <span asp-validation-for="DurationWeeks" class="text-danger small"></span>
@@ -90,4 +90,15 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        const toggle = document.getElementById('IsWorkoutOnly');
+        const durationGroup = document.getElementById('durationGroup');
+
+        function syncDuration() {
+            durationGroup.style.display = toggle.checked ? 'none' : '';
+        }
+
+        toggle.addEventListener('change', syncDuration);
+        syncDuration();
+    </script>
 }
