@@ -75,7 +75,25 @@
                                     @p.WeeklyPlans.SelectMany(w => w.Days).SelectMany(d => d.Exercises).Count()
                                 }
                             </td>
-                            <td class="text-center">@p.UserPrograms.Count</td>
+                            <td class="text-center">
+                                @if (p.UserPrograms.Count == 0)
+                                {
+                                    <span class="badge bg-secondary">0</span>
+                                }
+                                else
+                                {
+                                    var emails = string.Join("&#10;", p.UserPrograms.Select(up => up.User.Email));
+                                    <span class="badge bg-primary enrolled-badge"
+                                          style="cursor:pointer"
+                                          data-bs-toggle="popover"
+                                          data-bs-trigger="click"
+                                          data-bs-placement="left"
+                                          data-bs-title="Enrolled Users"
+                                          data-bs-content="@emails">
+                                        @p.UserPrograms.Count
+                                    </span>
+                                }
+                            </td>
                             <td class="text-center">
                                 <div class="d-flex gap-1 justify-content-center flex-wrap">
                                     <a asp-action="Edit" asp-route-id="@p.Id"
@@ -102,3 +120,22 @@
     </div>
 
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.enrolled-badge').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.enrolled-badge').forEach(other => {
+                    if (other !== el) bootstrap.Popover.getInstance(other)?.hide();
+                });
+            });
+            new bootstrap.Popover(el, { html: false, sanitize: false });
+        });
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.enrolled-badge') && !e.target.closest('.popover'))
+                document.querySelectorAll('.enrolled-badge').forEach(el =>
+                    bootstrap.Popover.getInstance(el)?.hide());
+        });
+    </script>
+}

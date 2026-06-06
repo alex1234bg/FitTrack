@@ -29,6 +29,7 @@ public class AdminController : Controller
         var programs = await _db.WorkoutPrograms
             .Include(p => p.ProgramExercises)
             .Include(p => p.UserPrograms)
+                .ThenInclude(up => up.User)
             .Include(p => p.WeeklyPlans)
                 .ThenInclude(w => w.Days)
                     .ThenInclude(d => d.Exercises)
