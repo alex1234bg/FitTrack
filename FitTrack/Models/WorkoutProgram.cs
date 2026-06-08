@@ -16,6 +16,7 @@ public enum Category
     Flexibility
 }
 
+// Admin-created fitness program; users enrol via UserProgram, structured weeks via WeeklyPlan.
 public class WorkoutProgram
 {
     public int Id { get; set; }
@@ -41,10 +42,12 @@ public class WorkoutProgram
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
+    // When true the program uses free-form exercises only (no WeeklyPlan)
     public bool IsWorkoutOnly { get; set; }
 
     public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
+    // ---- Navigation ----
     public ICollection<ProgramExercise> ProgramExercises { get; set; } = new List<ProgramExercise>();
 
     public ICollection<UserProgram> UserPrograms { get; set; } = new List<UserProgram>();

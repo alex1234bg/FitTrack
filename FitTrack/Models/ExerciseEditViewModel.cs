@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models;
 
+// Form model for editing an existing exercise; ProgramId is carried through the round-trip for redirect.
 public class ExerciseEditViewModel
 {
     public int Id { get; set; }

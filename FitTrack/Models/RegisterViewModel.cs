@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models;
 
+// Form model for the registration page.
 public class RegisterViewModel
 {
     [Required]

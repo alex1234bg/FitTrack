@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FitTrack.Models;
 
+// A single weight measurement recorded by the user on a given date.
 public class WeightLog
 {
     public int Id { get; set; }

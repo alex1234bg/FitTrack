@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models;
 
+// Form model for adding a new exercise to a program; WorkoutProgramId determines the redirect target after save.
 public class ExerciseCreateViewModel
 {
     [Required]

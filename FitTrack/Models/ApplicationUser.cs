@@ -25,6 +25,7 @@ public enum FitnessLevel
     Advanced
 }
 
+// Extends ASP.NET Identity user with a fitness profile; profile fields are optional until onboarding completes.
 public class ApplicationUser : IdentityUser
 {
     // Profile fields — nullable so existing rows don't break on migration
@@ -36,5 +37,6 @@ public class ApplicationUser : IdentityUser
     public FitnessLevel? FitnessLevel       { get; set; }
     public bool         HasCompletedProfile { get; set; } = false;
 
+    // ---- Navigation ----
     public ICollection<UserProgram> UserPrograms { get; set; } = new List<UserProgram>();
 }

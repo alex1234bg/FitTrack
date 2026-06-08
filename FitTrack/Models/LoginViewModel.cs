@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models;
 
+// Form model for the login page.
 public class LoginViewModel
 {
     [Required]

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FitTrack.Models;
 
+// User review for a program; limited to one per user/program pair (unique index in DbContext).
 public class ProgramReview
 {
     public int Id { get; set; }

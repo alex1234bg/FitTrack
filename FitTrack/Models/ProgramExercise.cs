@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FitTrack.Models;
 
+// Join table — many-to-many between WorkoutProgram and Exercise.
 public class ProgramExercise
 {
     public int Id { get; set; }

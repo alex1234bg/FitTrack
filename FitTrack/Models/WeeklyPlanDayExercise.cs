@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FitTrack.Models;
 
+// An exercise slot within a WeeklyPlanDay; ExerciseId is optional to allow free-text entries.
 public class WeeklyPlanDayExercise
 {
     public int Id { get; set; }
@@ -13,6 +14,7 @@ public class WeeklyPlanDayExercise
     [ForeignKey(nameof(WeeklyPlanDayId))]
     public WeeklyPlanDay WeeklyPlanDay { get; set; } = null!;
 
+    // Optional link to a library Exercise; ExerciseName is the display copy stored at creation time
     public int? ExerciseId { get; set; }
 
     [ForeignKey(nameof(ExerciseId))]

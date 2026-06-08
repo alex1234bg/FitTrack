@@ -9,6 +9,7 @@ public enum RepUnit
     Minutes
 }
 
+// Reusable exercise definition; linked to programs via ProgramExercise.
 public class Exercise
 {
     public int Id { get; set; }
@@ -37,5 +38,6 @@ public class Exercise
     [StringLength(500)]
     public string? ImageUrl { get; set; }
 
+    // ---- Navigation ----
     public ICollection<ProgramExercise> ProgramExercises { get; set; } = new List<ProgramExercise>();
 }

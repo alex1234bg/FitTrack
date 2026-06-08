@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models.ViewModels;
 
+// Form model for logging a completed workout session.
 public class LogWorkoutViewModel
 {
     // Populated in GET, used for the dropdown

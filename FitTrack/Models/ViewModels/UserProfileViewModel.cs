@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FitTrack.Models.ViewModels;
 
+// Form model for the onboarding (Setup) and profile-edit pages.
 public class UserProfileViewModel
 {
     [Required]

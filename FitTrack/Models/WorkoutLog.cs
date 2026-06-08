@@ -11,6 +11,7 @@ public enum Feeling
     Tough
 }
 
+// A completed workout session recorded by the user; tied to a specific program.
 public class WorkoutLog
 {
     public int Id { get; set; }

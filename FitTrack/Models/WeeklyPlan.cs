@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FitTrack.Models;
 
+// One structured week within a WorkoutProgram; contains ordered training days.
 public class WeeklyPlan
 {
     public int Id { get; set; }
@@ -24,5 +25,6 @@ public class WeeklyPlan
     [StringLength(1000)]
     public string? Description { get; set; }
 
+    // ---- Navigation ----
     public ICollection<WeeklyPlanDay> Days { get; set; } = new List<WeeklyPlanDay>();
 }
