@@ -82,7 +82,7 @@
                                 }
                                 else
                                 {
-                                    var emails = string.Join("&#10;", p.UserPrograms.Select(up => up.User.Email));
+                                    var emails = string.Join(", ", p.UserPrograms.Select(up => up.User.Email));
                                     <span class="badge bg-primary enrolled-badge"
                                           style="cursor:pointer"
                                           data-bs-toggle="popover"
