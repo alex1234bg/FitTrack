@@ -29,7 +29,11 @@
     var weekColors = new[] { "#0d6efd", "#198754", "#6f42c1", "#fd7e14", "#0dcaf0" };
     var weeks = Model.WeeklyPlans.OrderBy(w => w.WeekNumber).ToList();
 
-    int totalExercises = weeks.SelectMany(w => w.Days).SelectMany(d => d.Exercises).Count();
+    // Workout-Only programs (and any program without a weekly plan) store their
+    // exercises in ProgramExercises rather than in WeeklyPlan days.
+    int totalExercises = Model.IsWorkoutOnly || weeks.Count == 0
+        ? Model.ProgramExercises.Count
+        : weeks.SelectMany(w => w.Days).SelectMany(d => d.Exercises).Count();
 }
 
 <style>
